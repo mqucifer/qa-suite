@@ -5,8 +5,19 @@ description = "QA's functional tests, one folder per project, run against each p
 requires-python = ">=3.12"
 dependencies = ["pytest>=8.0"]
 
+[project.optional-dependencies]
+dev = ["ruff>=0.6"]
+
 [tool.uv]
 package = false
 
 [tool.pytest.ini_options]
 addopts = "-ra"
+
+# The design's checks lint QA's tests. `.github/crew/` is the template's, changed
+# only by the template (mqucifer/crew ADR 0030); `.project/` is a project placed
+# beside its folder for QA's session to read, never committed (crew#896).
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".github/crew", ".project"]

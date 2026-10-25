@@ -1,0 +1,65 @@
+# The project's onboarding record (mqucifer/crew#111). Intent is the Sponsor's.
+# This one is a draft of it, written by hand by the builder of mqucifer/crew#896,
+# because `crew onboard` refuses a repository below readiness level 2 (crew ADR
+# 0030). The Sponsor corrects and merges it. Design is the project's
+# Architect's, from `crew design qa-suite`, here drafted by hand too: the checks
+# the suite's own files need, since its tests run only against a build, in CI.
+version: 3
+intent:
+  scope:
+    # What qa-suite is for is ADR 0006 in mqucifer/project-print.
+    purpose: Hold QA's functional tests, a folder per project, run against every
+      pull request's build, so a change that breaks what a project accepted fails
+      its pull request where the Developer can't edit the test.
+    serves:
+      - who: The crew's QA, working a Task a merged story, an escaped bug or a
+          dispute opened
+        needs:
+          - The project's surface and how its build starts, from its folder's README.
+          - Its own tests, run against the project's main before they merge.
+      - who: A Developer whose pull request fails QA's check
+        needs:
+          - Which test failed, and its log, through the check.
+          - A way to dispute a test it thinks is wrong, without editing it.
+      - who: The Sponsor
+        needs:
+          - That only QA changes the tests, reviewed before they merge.
+    out_of_scope:
+      - Unit tests of a project's code. Those stay in the project.
+      - Tests that need the Spark. The tests go through a project's surface, not
+        the model (ADR 0006 in mqucifer/project-print).
+      - Changing a project. A folder reads its project, and never changes it.
+  release:
+    # The merge is the end: qa-suite's main is what every pull request runs.
+    deploys: false
+  done:
+    bar: A change is done when its acceptance criteria are met, its tests pass
+      against the project's main in CI, and the folder's README names each test.
+    also:
+      - A test goes through the surface its folder's README names, and nothing else.
+      - A test fails rather than skips when its build isn't there.
+    never_touch:
+      - .github/workflows/qa.yml
+  guidelines:
+    - Only QA writes here. A Developer disputes a test; it never edits one.
+    - A test is of behaviour on the project's main. One of work not yet merged
+      would fail every other pull request.
+    - A check is never weakened to make something pass.
+design:
+  language: Python 3.12
+  dependencies: 'Runtime: pytest>=8.0. Dev: ruff>=0.6.'
+  sandbox: Python 3.12 and uv. The tests need a running build, which only CI
+    starts, so the local checks lint and format; CI runs the tests.
+  setup: uv sync --extra dev --quiet
+  checks:
+    - uv run ruff check .
+    - uv run ruff format --check .
+  lockfile: uv.lock
+  ci_checks:
+    - 'qa.yml, called by each delivery repository, runs a folder''s tests against
+      that pull request''s build.'
+    - 'suite.yml runs each folder a qa-suite pull request changes against its
+      project''s main, so a test is proven before it merges.'
+  release_how: None. qa-suite's main is what every project's pull request runs.
+  structure: One folder per project, named as its repository, with README.md,
+    start.sh, stop.sh and test_*.py. The workflows are in .github/workflows/.

@@ -19,12 +19,19 @@ on:
         type: string
       suite-ref:
         # ADR 0006 runs main. This is only for proving a change to this
-        # repository from a delivery repository's branch before it merges; the
-        # template never sets it.
+        # repository before it merges: from a delivery repository's branch, or
+        # from qa-suite's own pull request (`suite.yml`). The template never sets it.
         description: The ref of qa-suite to run. Leave it as main.
         required: false
         type: string
         default: main
+      build-repository:
+        # Only `suite.yml` sets it, to run a qa-suite pull request's tests against
+        # the project's main (mqucifer/crew#896). The template never sets it.
+        description: The repository to build at its default branch, instead of the caller's pull request.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -44,8 +51,17 @@ jobs:
           fi
 
       - name: Check out the pull request
+        if: inputs.build-repository == ''
         uses: actions/checkout@v4
         with:
+          path: build
+          persist-credentials: false
+
+      - name: Check out the project's main
+        if: inputs.build-repository != ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.build-repository }}
           path: build
           persist-credentials: false
 
