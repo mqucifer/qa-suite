@@ -7,6 +7,14 @@
 # `<project>/start.sh` as the project's own CI would, and runs `<project>/`'s
 # tests. A project with no folder here yet passes, and says so, so the calling
 # workflow can reach every project before its tests exist.
+#
+# The pull request also runs the tests of each project that reads the caller
+# (ADR 0008 in mqucifer/project-print): `readers.py` finds them from each
+# project's own record, its `uses`, never from a list here. A reader's tests run
+# against the reader's main, with the caller's pull request as what it reads
+# (`QA_PRODUCER` and `QA_PRODUCER_CHECKOUT` for its `start.sh`). The `qa` job at
+# the end is the check a delivery repository requires, `qa-suite / qa`, so its
+# id never changes.
 
 name: qa
 
@@ -37,9 +45,11 @@ permissions:
   contents: read
 
 jobs:
-  qa:
+  readers:
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.find.outputs.matrix }}
     env:
       PROJECT: ${{ inputs.project }}
     steps:
@@ -50,19 +60,73 @@ jobs:
             exit 1
           fi
 
+      - name: Check out qa-suite
+        uses: actions/checkout@v4
+        with:
+          repository: mqucifer/qa-suite
+          ref: ${{ inputs.suite-ref }}
+          path: suite
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Find the projects that read it
+        id: find
+        working-directory: suite
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_REPOSITORY: ${{ inputs.build-repository }}
+        run: |
+          # suite.yml builds a project's main to prove QA's own change: there is
+          # no producer's pull request, so its readers don't run.
+          if [ -n "$BUILD_REPOSITORY" ]; then
+            echo "matrix=[{\"folder\": \"$PROJECT\", \"reads\": \"\"}]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          uv run --locked python .github/qa/readers.py mqucifer "$PROJECT" .
+
+  run:
+    needs: readers
+    name: ${{ matrix.reads && format('{0} reads {1}', matrix.folder, matrix.reads) || matrix.folder }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.readers.outputs.matrix) }}
+    env:
+      PROJECT: ${{ matrix.folder }}
+      READS: ${{ matrix.reads }}
+    steps:
       - name: Check out the pull request
-        if: inputs.build-repository == ''
+        if: matrix.reads == '' && inputs.build-repository == ''
         uses: actions/checkout@v4
         with:
           path: build
           persist-credentials: false
 
       - name: Check out the project's main
-        if: inputs.build-repository != ''
+        if: matrix.reads == '' && inputs.build-repository != ''
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.build-repository }}
           path: build
+          persist-credentials: false
+
+      - name: Check out the reader's main
+        if: matrix.reads != ''
+        uses: actions/checkout@v4
+        with:
+          repository: mqucifer/${{ matrix.folder }}
+          path: build
+          persist-credentials: false
+
+      - name: Check out the pull request, as what the reader reads
+        if: matrix.reads != ''
+        uses: actions/checkout@v4
+        with:
+          path: producer
           persist-credentials: false
 
       - name: Check out qa-suite
@@ -97,13 +161,65 @@ jobs:
 
       - name: Start the build
         if: steps.find.outputs.found == 'true'
-        run: bash "suite/$PROJECT/start.sh" "$GITHUB_WORKSPACE/build"
+        run: |
+          if [ -n "$READS" ]; then
+            export QA_PRODUCER="$READS" QA_PRODUCER_CHECKOUT="$GITHUB_WORKSPACE/producer"
+          fi
+          bash "suite/$PROJECT/start.sh" "$GITHUB_WORKSPACE/build"
 
       - name: Run QA's tests
         if: steps.find.outputs.found == 'true'
         working-directory: suite
-        run: uv run --locked pytest "$PROJECT" -v
+        run: uv run --locked pytest "$PROJECT" -v --junitxml="$RUNNER_TEMP/qa.xml"
+
+      - name: Name the tests that failed
+        if: failure() && steps.find.outputs.found == 'true'
+        run: |
+          python3 - "$RUNNER_TEMP/qa.xml" <<'PY'
+          import os, sys, xml.etree.ElementTree as ET
+          who = os.environ["PROJECT"]
+          if os.environ["READS"]:
+              who += f", which reads {os.environ['READS']},"
+          try:
+              cases = ET.parse(sys.argv[1]).iter("testcase")
+          except (OSError, ET.ParseError):
+              sys.exit(0)  # The build didn't start, and that step says why.
+          lines = []
+          for case in cases:
+              bad = case.find("failure")
+              if bad is None:
+                  bad = case.find("error")
+              if bad is None:
+                  continue
+              test = f"{case.get('classname')}::{case.get('name')}"
+              reason = (bad.get("message") or "").splitlines()[0][:200] if bad.get("message") else ""
+              print(f"::error title={who} failed {test}::{reason}")
+              lines.append(f"- {who} failed `{test}`: {reason}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write("\n".join(lines) + "\n")
+          PY
 
       - name: Stop the build
         if: always() && steps.find.outputs.found == 'true'
         run: bash "suite/$PROJECT/stop.sh"
+
+  # The check a delivery repository requires (`qa-suite / qa`): keep its id.
+  qa:
+    needs: [readers, run]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Pass only if every folder passed
+        env:
+          READERS: ${{ needs.readers.result }}
+          RUN: ${{ needs.run.result }}
+        run: |
+          if [ "$READERS" != success ]; then
+            echo "::error::the projects that read this one couldn't be found ($READERS)"
+            exit 1
+          fi
+          if [ "$RUN" != success ]; then
+            echo "::error::a folder's tests failed ($RUN): its job and annotation name the project and the test"
+            exit 1
+          fi
