@@ -1,4 +1,44 @@
-# project-template
+# qa-suite
+
+QA's functional tests, one folder per project, run against each pull request's
+build by GitHub Actions (ADR 0006 in mqucifer/project-print). A failing test
+fails the pull request's `qa-suite / qa` check, which blocks the merge once the
+Sponsor makes it required. A Developer who thinks a test is wrong disputes it;
+they don't edit it here.
+
+## How a pull request runs it
+Every delivery repository's `.github/workflows/qa.yml`, from project-template,
+calls `.github/workflows/qa.yml` here with its repository's name. That workflow:
+
+1. checks out the pull request, and this repository's main;
+2. passes, saying so, if there is no folder here for the project yet;
+3. runs `<project>/start.sh <checkout>`, which builds and starts the project as
+   its own CI does and writes `QA_BASE_URL` to `$GITHUB_ENV`;
+4. runs `uv run pytest <project>`;
+5. runs `<project>/stop.sh`, always.
+
+Its `suite-ref` input is only for proving a change here from a delivery
+repository's branch before it merges. The template never sets it.
+
+## A project's folder
+| File | What it does |
+|---|---|
+| `README.md` | The surface the tests go through (API, page, CLI) and how the build is started |
+| `start.sh <checkout>` | Builds and starts the pull request's build, waits until it answers, and writes `QA_BASE_URL` |
+| `stop.sh` | Prints the build's log and removes what `start.sh` started, even after a part-way start |
+| `test_*.py` | The tests, through the surface only |
+
+| Project | Surface |
+|---|---|
+| [`sprint-metrics/`](sprint-metrics/README.md) | Its HTTP service |
+
+## Who writes here
+Only QA. `.github/CODEOWNERS` names QA's reviewer, the Sponsor (`@mquarters`)
+for now; it moves to the crew's account when the crew takes this repository
+over. **Requiring code-owner review on main is the Sponsor's step**, since
+branch protection needs admin.
+
+## From the template
 
 The files every crew-built project starts with (mqucifer/crew ADR 0030). A new
 repository is created from this template by `scripts/new-project.sh` in the
@@ -17,5 +57,5 @@ is missing, so older projects catch up when the template changes.
 Nothing here depends on the project's language: that comes from its design. Stories
 don't change these files; the template does, by pull request.
 
-## Before the crew takes it over
+### Before the crew takes it over
 This repository is a Claude-built alpha, tracked on the Crew roadmap board (https://github.com/orgs/mqucifer/projects/2). Its board workflow (`.github/workflows/board.yml`) runs only by hand, so its issues stay off the crew's delivery board. **At takeover, restore its `issues` and `pull_request` triggers,** as the comment in that file says.

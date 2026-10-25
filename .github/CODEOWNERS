@@ -1,0 +1,5 @@
+# Only QA writes here (ADR 0006 in mqucifer/project-print): a Developer's change
+# is refused by review. QA's reviewer is the Sponsor until the crew takes this
+# repository over, when it moves to the crew's account. Requiring code-owner
+# review on main is the Sponsor's step (branch protection needs admin).
+* @mquarters
