@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Start sprint-metrics' service from a pull request's checkout, as its own CI's
 # docker job does (.github/workflows/tests.yml there): the image built from the
-# checkout's Dockerfile, run with --service against Postgres 16, pinned by the
-# same digest.
+# checkout's Dockerfile, run with no arguments (its service) against Postgres 16,
+# pinned by the same digest.
 #
 #   start.sh <checkout>
 #
@@ -42,7 +42,7 @@ done
 
 docker run -d --name "$APP" --network "$NET" -p "$PORT:8080" \
   -e SPRINT_METRICS_DB="postgresql://sprint_metrics:sprint_metrics@$DB:5432/sprint_metrics" \
-  "$IMAGE" --service > /dev/null
+  "$IMAGE" > /dev/null
 
 url="http://localhost:$PORT"
 deadline=$((SECONDS + 30))
