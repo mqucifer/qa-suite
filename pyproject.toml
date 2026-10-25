@@ -1,0 +1,12 @@
+[project]
+name = "qa-suite"
+version = "0.0.0"
+description = "QA's functional tests, one folder per project, run against each pull request's build."
+requires-python = ">=3.12"
+dependencies = ["pytest>=8.0"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+addopts = "-ra"
