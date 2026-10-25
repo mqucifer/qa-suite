@@ -179,7 +179,16 @@ jobs:
           import os, sys, xml.etree.ElementTree as ET
           who = os.environ["PROJECT"]
           if os.environ["READS"]:
-              who += f", which reads {os.environ['READS']},"
+              who += f" (it reads {os.environ['READS']})"
+
+
+          def prop(text):
+              # A workflow command's property ends at a comma or colon unless escaped.
+              for a, b in (("%", "%25"), ("\r", "%0D"), ("\n", "%0A"), (":", "%3A"), (",", "%2C")):
+                  text = text.replace(a, b)
+              return text
+
+
           try:
               cases = ET.parse(sys.argv[1]).iter("testcase")
           except (OSError, ET.ParseError):
@@ -193,7 +202,7 @@ jobs:
                   continue
               test = f"{case.get('classname')}::{case.get('name')}"
               reason = (bad.get("message") or "").splitlines()[0][:200] if bad.get("message") else ""
-              print(f"::error title={who} failed {test}::{reason}")
+              print(f"::error title={prop(f'{who} failed {test}')}::{reason.replace('%', '%25')}")
               lines.append(f"- {who} failed `{test}`: {reason}")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
               f.write("\n".join(lines) + "\n")
