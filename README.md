@@ -81,10 +81,13 @@ committed.
 | [`crew-presentation/`](crew-presentation/README.md) | Its site's pages, built from the crew's `delivery-history` package |
 
 ## Who writes here
-Only QA. `.github/CODEOWNERS` names QA's reviewer, the Sponsor (`@mquarters`)
-for now. **At takeover it moves to the crew's account, which is the Sponsor's
-step**, as is requiring code-owner review on main, since branch protection
-needs admin.
+Only QA. The crew enforces it: QA's Tasks write only their project's folder
+here (mqucifer/crew#909), and no Developer session has this repository in
+scope. Code-owner review isn't required (the Sponsor, 2026-10-25): GitHub
+accepts only people and teams as code owners, and the crew's GitHub App can't
+be one. `.github/CODEOWNERS` names the Sponsor (`@mquarters`), so a PR a person
+opens still shows a reviewer. Requiring the `checks` and `qa` checks on main is
+the Sponsor's step, since branch protection needs admin.
 
 ## From the template
 
