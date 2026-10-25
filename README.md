@@ -17,8 +17,30 @@ calls `.github/workflows/qa.yml` here with its repository's name. That workflow:
 4. runs `uv run pytest <project>`;
 5. runs `<project>/stop.sh`, always.
 
-Its `suite-ref` input is only for proving a change here from a delivery
-repository's branch before it merges. The template never sets it.
+Its `suite-ref` input is only for proving a change here before it merges, and
+`build-repository` only for `suite.yml` below. The template sets neither.
+
+## How QA's own pull request is proven
+A test here runs on every pull request of its project once it merges, so it's
+proven first. `.github/workflows/suite.yml` runs each project folder a pull
+request here changes through `qa.yml`, against that project's main and with the
+pull request's tests. A red test comes back to QA before it can fail anyone
+else's pull request. The repository's own checks (`checks.yml`, from its
+record's design) lint and format the tests; only CI runs them, against a build.
+
+## Where QA's tests come from
+QA's Tasks, filed here by the crew, each changing only its project's folder
+(mqucifer/crew#896):
+
+- **A story merges** in a project with a folder here: the test of its criteria,
+  through the folder's surface. After the merge, never before: a test of work
+  not yet on the project's main would fail every other pull request there.
+- **An escaped bug's fix merges:** the test that would have caught it.
+- **A Developer disputes a test** its pull request fails: QA fixes the test, or
+  says why it stands and the Developer changes the code. The story waits.
+
+A QA session reads its project at `.project/<project>/` in its worktree, never
+committed.
 
 ## A project's folder
 | File | What it does |
@@ -34,9 +56,9 @@ repository's branch before it merges. The template never sets it.
 
 ## Who writes here
 Only QA. `.github/CODEOWNERS` names QA's reviewer, the Sponsor (`@mquarters`)
-for now; it moves to the crew's account when the crew takes this repository
-over. **Requiring code-owner review on main is the Sponsor's step**, since
-branch protection needs admin.
+for now. **At takeover it moves to the crew's account, which is the Sponsor's
+step**, as is requiring code-owner review on main, since branch protection
+needs admin.
 
 ## From the template
 
@@ -57,5 +79,8 @@ is missing, so older projects catch up when the template changes.
 Nothing here depends on the project's language: that comes from its design. Stories
 don't change these files; the template does, by pull request.
 
-### Before the crew takes it over
-This repository is a Claude-built alpha, tracked on the Crew roadmap board (https://github.com/orgs/mqucifer/projects/2). Its board workflow (`.github/workflows/board.yml`) runs only by hand, so its issues stay off the crew's delivery board. **At takeover, restore its `issues` and `pull_request` triggers,** as the comment in that file says.
+### The crew's since mqucifer/crew#896
+This repository was a Claude-built alpha. The crew took it over with
+mqucifer/crew#896: its board workflow's `issues` and `pull_request` triggers are
+back, and its record, `.crew/project.yaml`, is a draft for the Sponsor to
+correct and merge.

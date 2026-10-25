@@ -11,7 +11,8 @@ own CI docker job does (`.github/workflows/tests.yml` there). It builds the
 image from the pull request's Dockerfile, starts Postgres 16 by the same
 digest, runs the image with no arguments (its service, since
 mqucifer/sprint-metrics#788 retired the CLI), and waits for GET /health.
-`stop.sh` prints the service's log and removes it all. When sprint-metrics
+`stop.sh` prints the service's log and removes it all. A pull request here
+runs them against sprint-metrics' main (`suite.yml`) before they merge. When sprint-metrics
 changes how its CI starts the image, `start.sh` follows.
 
 | Test | What it proves |
