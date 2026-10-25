@@ -1,5 +1,5 @@
-# Only QA writes here (ADR 0006 in mqucifer/project-print): a Developer's change
-# is refused by review. QA's reviewer is the Sponsor until the crew takes this
-# repository over, when it moves to the crew's account. Requiring code-owner
-# review on main is the Sponsor's step (branch protection needs admin).
+# Only QA writes here (ADR 0006 in mqucifer/project-print). The crew enforces
+# it by scope (mqucifer/crew#909). Code-owner review isn't required: GitHub
+# accepts only people and teams as code owners, so the crew's App can't be one.
+# This names a reviewer for PRs a person opens.
 * @mquarters
