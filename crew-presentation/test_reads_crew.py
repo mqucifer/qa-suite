@@ -65,7 +65,8 @@ def test_a_sprints_page_shows_its_throughput():
             page("/" + slug),
         )
         assert shown, f"{slug} shows no 'stories delivered'"
-        assert html.unescape(shown.group(1)) == str(answer["throughput"]), (
+        expected = "—" if answer["throughput"] is None else str(answer["throughput"])
+        assert html.unescape(shown.group(1)) == expected, (
             f"{slug} shows {shown.group(1)!r} stories delivered; "
             f"the package says {answer['throughput']!r}"
         )
