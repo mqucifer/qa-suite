@@ -7,6 +7,13 @@
 # would, but against that project's main and with this pull request's tests. A
 # red test comes back to QA before it can fail anyone else's pull request. A pull
 # request that changes no project folder runs nothing, and passes.
+#
+# A dispute's pull request runs against the disputed pull request's head instead
+# (mqucifer/crew#945): its fix can need the story's change, so against main it
+# could never pass. The crew writes the dispute in the pull request's body as
+# `<!-- crew:qa-dispute repo=<project> story=<n> pull=<n> head=<sha> -->`, and
+# lands the story first, then this pull request straight after. Only a pull
+# request from this repository's own branches is read that way, never a fork's.
 
 name: suite
 
@@ -21,6 +28,8 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       projects: ${{ steps.find.outputs.projects }}
+      disputed-repo: ${{ steps.disputed.outputs.repo }}
+      disputed-head: ${{ steps.disputed.outputs.head }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,6 +52,26 @@ jobs:
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "Project folders changed: $projects" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Find the pull request a dispute's test runs against
+        id: disputed
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          found=$(printf '%s' "$BODY" \
+            | grep -oE '<!-- crew:qa-dispute repo=[A-Za-z0-9._-]+ story=[0-9]+ pull=[0-9]+ head=[0-9a-f]{40} -->' \
+            | tail -n 1 || true)
+          if [ -z "$found" ]; then
+            exit 0
+          fi
+          repo=$(printf '%s' "$found" | sed -E 's/.* repo=([^ ]+) .*/\1/')
+          pull=$(printf '%s' "$found" | sed -E 's/.* pull=([0-9]+) .*/\1/')
+          head=$(printf '%s' "$found" | sed -E 's/.* head=([0-9a-f]+) .*/\1/')
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          echo "A dispute: $repo/ runs against mqucifer/$repo#$pull at $head, not its main." \
+            >> "$GITHUB_STEP_SUMMARY"
+
   qa:
     needs: changed
     if: needs.changed.outputs.projects != '[]'
@@ -54,4 +83,6 @@ jobs:
     with:
       project: ${{ matrix.project }}
       build-repository: mqucifer/${{ matrix.project }}
+      # The disputed pull request's head for its project's folder; main for any other.
+      build-ref: ${{ matrix.project == needs.changed.outputs.disputed-repo && needs.changed.outputs.disputed-head || '' }}
       suite-ref: ${{ github.event.pull_request.head.sha }}
