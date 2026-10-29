@@ -18,8 +18,6 @@
 
 name: board
 
-# On since the crew took this repository over (mqucifer/crew#896): QA's Tasks
-# are filed and worked here, on the crew's delivery board.
 on:
   issues:
     types: [opened, closed]
