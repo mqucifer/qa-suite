@@ -79,7 +79,7 @@ def _attempt_rows(html: str) -> list[dict]:
     for i, start in enumerate(row_starts):
         end = row_starts[i + 1] if i + 1 < len(row_starts) else len(html)
         row_html = html[start:end]
-        num_match = re.search(r"#(\d+)", row_html)
+        num_match = re.search(r'class="num meta">#(\d+)', row_html)
         number = int(num_match.group(1)) if num_match else None
         status_match = re.search(r'<span class="attempt-status[^"]*">([^<]*)</span>', row_html)
         status = status_match.group(1).strip() if status_match else None
