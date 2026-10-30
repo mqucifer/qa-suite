@@ -24,6 +24,9 @@ build.py refusing the package doesn't stop the start: that's the first test.
 |---|---|
 | `test_reads_crew.py::test_the_site_accepts_the_package` | build.py accepts the package: its schema's major is one the site displays (mqucifer/crew#905's case), and it validates |
 | `test_reads_crew.py::test_a_sprints_page_shows_its_throughput` | Each sprint's page shows sprint-metrics' `throughput` from the package as "stories delivered" |
+| `test_sprint_overview.py::test_retried_story_shows_retried_not_first_try` | A story whose pattern is not 'first_try' (e.g. 'retried') shows its own pattern as its status badge, not 'first try' (mqucifer/crew-presentation#206: the old code assigned 'first try' by position to match the total) |
+| `test_sprint_overview.py::test_attempt_row_count_matches_package_stories` | The attempt chart shows one row per story the package records for that sprint; no rows are cut to match sprint-metrics' denominator (mqucifer/crew-presentation#206) |
+| `test_sprint_overview.py::test_first_try_story_shows_first_try_regardless_of_position` | A story whose pattern is 'first_try' shows 'first try' as its badge regardless of its position in the list (mqucifer/crew-presentation#206: the old code would label it 'merged' if its position exceeded the numerator) |
 
 ## Running it locally
 ```sh
