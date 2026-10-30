@@ -5,12 +5,8 @@
 #
 #   start.sh <checkout>
 #
-# The package is the one the site reads from the crew (its record's `uses`):
-# - on a crew pull request (QA_PRODUCER=crew), the package built by that pull
-#   request's code: its contracts/delivery-history/mock/, with the schemas
-#   beside it, which crew's own tests keep current with the code;
-# - otherwise, the release the checkout's delivery-history.tag names, as the
-#   site's setup fetches it.
+# The package is the one the site reads from the crew (its record's `uses`): the
+# release the checkout's delivery-history.tag names, as the site's setup fetches it.
 #
 # build.py refusing the package isn't a start failure: it's what the tests are
 # for. Its exit status and log go to $STATE for test_reads_crew.py, and the
@@ -40,29 +36,10 @@ package="$checkout/.package/$tag"
 rm -rf "$package" "$checkout/build"
 mkdir -p "$checkout/.package"
 
-case "${QA_PRODUCER:-}" in
-  crew)
-    contracts="${QA_PRODUCER_CHECKOUT:?QA_PRODUCER_CHECKOUT is unset}/contracts/delivery-history"
-    [ -f "$contracts/mock/manifest.json" ] || fail "the crew pull request has no package at $contracts/mock/"
-    cp -R "$contracts/mock" "$package"
-    cp "$contracts"/*.json "$package/"
-    rm -f "$package/versions.json"
-    echo "The package: crew's pull request's, from contracts/delivery-history/mock/"
-    ;;
-  "")
-    url="https://github.com/mqucifer/crew/releases/download/$tag/$tag.tar.gz"
-    curl -sfL "$url" | tar -xz -C "$checkout/.package" || fail "couldn't fetch $url"
-    [ -f "$package/manifest.json" ] || fail "$tag's archive has no $tag/manifest.json"
-    echo "The package: the release $tag, which delivery-history.tag names"
-    ;;
-  *)
-    # The site reads nothing else from a build: design-system's CSS comes from
-    # jsDelivr at the tag the site pins. So its tests run on the released package.
-    echo "::notice::crew-presentation reads $QA_PRODUCER at the version it pins, not from a build, so its tests run as the site stands"
-    url="https://github.com/mqucifer/crew/releases/download/$tag/$tag.tar.gz"
-    curl -sfL "$url" | tar -xz -C "$checkout/.package" || fail "couldn't fetch $url"
-    ;;
-esac
+url="https://github.com/mqucifer/crew/releases/download/$tag/$tag.tar.gz"
+curl -sfL "$url" | tar -xz -C "$checkout/.package" || fail "couldn't fetch $url"
+[ -f "$package/manifest.json" ] || fail "$tag's archive has no $tag/manifest.json"
+echo "The package: the release $tag, which delivery-history.tag names"
 
 uv sync -q --project "$checkout" --frozen --no-dev || fail "the site's dependencies didn't install from its uv.lock"
 set +e

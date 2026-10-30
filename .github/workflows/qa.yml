@@ -8,13 +8,10 @@
 # tests. A project with no folder here yet passes, and says so, so the calling
 # workflow can reach every project before its tests exist.
 #
-# The pull request also runs the tests of each project that reads the caller
-# (ADR 0008 in mqucifer/project-print): `readers.py` finds them from each
-# project's own record, its `uses`, never from a list here. A reader's tests run
-# against the reader's main, with the caller's pull request as what it reads
-# (`QA_PRODUCER` and `QA_PRODUCER_CHECKOUT` for its `start.sh`). The `qa` job at
-# the end is the check a delivery repository requires, `qa-suite / qa`, so its
-# id never changes.
+# Only the caller's own folder runs. A producer's pull request doesn't run the
+# tests of the projects that read it: a consumer's tests run on its own pull
+# requests (ADR 0008 in mqucifer/project-print). The `qa` job is the check a
+# delivery repository requires, `qa-suite / qa`, so its id never changes.
 #
 # A disputed pull request runs QA's changed test, not main's (mqucifer/crew#945).
 # When an open pull request from one of qa-suite's own branches names the caller's
@@ -100,15 +97,25 @@ jobs:
           fi
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
 
-  readers:
+  # The check a delivery repository requires (`qa-suite / qa`): keep its id.
+  qa:
     needs: suite
+    # A failed `suite` job would skip this one, and a skipped required check passes.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      matrix: ${{ steps.find.outputs.matrix }}
+    timeout-minutes: 30
     env:
       PROJECT: ${{ inputs.project }}
     steps:
+      - name: Check the qa-suite this runs was found
+        env:
+          SUITE: ${{ needs.suite.result }}
+        run: |
+          if [ "$SUITE" != success ]; then
+            echo "::error::the qa-suite to run couldn't be found ($SUITE)"
+            exit 1
+          fi
+
       - name: Check the project's name
         run: |
           if ! [[ "$PROJECT" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]*$ ]]; then
@@ -116,74 +123,20 @@ jobs:
             exit 1
           fi
 
-      - name: Check out qa-suite
-        uses: actions/checkout@v4
-        with:
-          repository: mqucifer/qa-suite
-          ref: ${{ needs.suite.outputs.ref }}
-          path: suite
-          persist-credentials: false
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Find the projects that read it
-        id: find
-        working-directory: suite
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BUILD_REPOSITORY: ${{ inputs.build-repository }}
-        run: |
-          # suite.yml builds a project's main to prove QA's own change: there is
-          # no producer's pull request, so its readers don't run.
-          if [ -n "$BUILD_REPOSITORY" ]; then
-            echo "matrix=[{\"folder\": \"$PROJECT\", \"reads\": \"\"}]" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          uv run --locked python .github/qa/readers.py mqucifer "$PROJECT" .
-
-  run:
-    needs: [suite, readers]
-    name: ${{ matrix.reads && format('{0} reads {1}', matrix.folder, matrix.reads) || matrix.folder }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.readers.outputs.matrix) }}
-    env:
-      PROJECT: ${{ matrix.folder }}
-      READS: ${{ matrix.reads }}
-    steps:
       - name: Check out the pull request
-        if: matrix.reads == '' && inputs.build-repository == ''
+        if: inputs.build-repository == ''
         uses: actions/checkout@v4
         with:
           path: build
           persist-credentials: false
 
       - name: Check out the project's main, or the disputed pull request's head
-        if: matrix.reads == '' && inputs.build-repository != ''
+        if: inputs.build-repository != ''
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.build-repository }}
           ref: ${{ inputs.build-ref }}
           path: build
-          persist-credentials: false
-
-      - name: Check out the reader's main
-        if: matrix.reads != ''
-        uses: actions/checkout@v4
-        with:
-          repository: mqucifer/${{ matrix.folder }}
-          path: build
-          persist-credentials: false
-
-      - name: Check out the pull request, as what the reader reads
-        if: matrix.reads != ''
-        uses: actions/checkout@v4
-        with:
-          path: producer
           persist-credentials: false
 
       - name: Check out qa-suite
@@ -218,11 +171,7 @@ jobs:
 
       - name: Start the build
         if: steps.find.outputs.found == 'true'
-        run: |
-          if [ -n "$READS" ]; then
-            export QA_PRODUCER="$READS" QA_PRODUCER_CHECKOUT="$GITHUB_WORKSPACE/producer"
-          fi
-          bash "suite/$PROJECT/start.sh" "$GITHUB_WORKSPACE/build"
+        run: bash "suite/$PROJECT/start.sh" "$GITHUB_WORKSPACE/build"
 
       - name: Run QA's tests
         if: steps.find.outputs.found == 'true'
@@ -235,8 +184,6 @@ jobs:
           python3 - "$RUNNER_TEMP/qa.xml" <<'PY'
           import os, sys, xml.etree.ElementTree as ET
           who = os.environ["PROJECT"]
-          if os.environ["READS"]:
-              who += f" (it reads {os.environ['READS']})"
 
 
           def prop(text):
@@ -269,23 +216,3 @@ jobs:
         if: always() && steps.find.outputs.found == 'true'
         run: bash "suite/$PROJECT/stop.sh"
 
-  # The check a delivery repository requires (`qa-suite / qa`): keep its id.
-  qa:
-    needs: [suite, readers, run]
-    if: always()
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Pass only if every folder passed
-        env:
-          READERS: ${{ needs.readers.result }}
-          RUN: ${{ needs.run.result }}
-        run: |
-          if [ "$READERS" != success ]; then
-            echo "::error::the projects that read this one couldn't be found ($READERS)"
-            exit 1
-          fi
-          if [ "$RUN" != success ]; then
-            echo "::error::a folder's tests failed ($RUN): its job and annotation name the project and the test"
-            exit 1
-          fi

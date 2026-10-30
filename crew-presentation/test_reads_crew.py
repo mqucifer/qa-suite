@@ -1,9 +1,9 @@
 """crew-presentation reads the crew's delivery-history package: what it takes from it.
 
-The site is built from the package start.sh put in place (a crew pull request's,
-or the release the site names) and reached at QA_BASE_URL. These are the reads a
-crew change could break (ADR 0008 in mqucifer/project-print): that the site
-accepts the package at all, and that a sprint's page shows what sprint-metrics
+The site is built from the package start.sh put in place (the release the site
+names) and reached at QA_BASE_URL. These are the reads a crew change could break,
+run on the site's own pull requests (ADR 0008 in mqucifer/project-print): that the
+site accepts the package at all, and that a sprint's page shows what sprint-metrics
 answered for it, as the package carries it.
 """
 
