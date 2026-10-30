@@ -20,30 +20,16 @@ calls `.github/workflows/qa.yml` here with its repository's name. That workflow:
 Its `suite-ref` input is only for proving a change here before it merges, and
 `build-repository` only for `suite.yml` below. The template sets neither.
 
-## The projects that read it run too
-A pull request also runs the folders of the projects that read its project
-(ADR 0008 in mqucifer/project-print), so a producer learns it breaks a reader
-before it merges, without knowing its readers:
-
-1. `.github/qa/readers.py` reads every mqucifer repository's `.crew/project.yaml`
-   at its default branch, through the GitHub API. A project whose
-   `intent.scope.uses` names the caller's repository is a reader. A reader with
-   no folder here, or a record that doesn't parse, is named in the summary.
-2. Each reader with a folder runs as its own job, `<reader> reads <project>`:
-   the reader's main is the checkout, and the pull request is what it reads,
-   passed to its `start.sh` as `QA_PRODUCER` (the project's name) and
-   `QA_PRODUCER_CHECKOUT`. A reader's `start.sh` builds with what it reads from
-   that checkout. A failed test is an annotation naming the reader and the test.
-3. The `qa` job passes only if every folder passed. It's the check a delivery
-   repository requires, so its id stays `qa`.
-
 A calling workflow passes only the project's name; `qa.yml` checks out the pull
 request itself. A repository not made from project-template (the crew's) calls
-`qa.yml` the same way, from a `.github/workflows/qa.yml` of its own.
-`suite.yml` doesn't run readers: it builds a project's main, not a producer's
-pull request.
+`qa.yml` the same way, from a `.github/workflows/qa.yml` of its own. Its `qa`
+job is the check a delivery repository requires, so its id stays `qa`.
 
-Check a change to `readers.py` with `uv run pytest .github/qa`.
+A pull request runs only its own project's folder. A producer's pull request
+doesn't run the tests of the projects that read it (ADR 0008 in
+mqucifer/project-print): a producer announces a breaking change and ships it a
+week later, and a consumer's tests of what it reads run on the consumer's own
+pull requests, including the one a release opens in it.
 
 ## How QA's own pull request is proven
 A test here runs on every pull request of its project once it merges, so it's
@@ -71,7 +57,7 @@ committed.
 | File | What it does |
 |---|---|
 | `README.md` | The surface the tests go through (API, page, CLI) and how the build is started |
-| `start.sh <checkout>` | Builds and starts the pull request's build, waits until it answers, and writes `QA_BASE_URL`. For a reader, it also builds with what it reads from `QA_PRODUCER_CHECKOUT` |
+| `start.sh <checkout>` | Builds and starts the pull request's build, waits until it answers, and writes `QA_BASE_URL` |
 | `stop.sh` | Prints the build's log and removes what `start.sh` started, even after a part-way start |
 | `test_*.py` | The tests, through the surface only |
 
