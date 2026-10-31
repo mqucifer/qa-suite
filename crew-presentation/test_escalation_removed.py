@@ -160,10 +160,10 @@ def test_replay_page_carries_escalated_events():
     the build does not fail.
 
     Given a package that records the crew's own escalation record (an event
-    with kind 'escalated' in a sprint's events file), when the build runs,
-    the replay page still carries that sprint's escalated events and the build
-    does not fail. Only sprint-metrics' escalation_count / escalation_rate_percent
-    are dropped; the crew's own record stays.
+    with kind 'escalated' in the last sprint's events file), when the build
+    runs, the replay page still carries that sprint's escalated events and the
+    build does not fail. Only sprint-metrics' escalation_count /
+    escalation_rate_percent are dropped; the crew's own record stays.
     """
     # The build must have succeeded
     status = (Path(STATE) / "build.status").read_text().strip()
@@ -172,25 +172,32 @@ def test_replay_page_carries_escalated_events():
         "the site must build even when the package carries escalated events"
     )
 
-    # Find escalated events in the package
+    # The replay page shows the last sprint's events. Find that sprint's
+    # events file and check for escalated events there.
     index = _load_index()
+    sprints = index.get("sprints", [])
+    if not sprints:
+        return  # no sprints: vacuous, but the build-doesn't-fail assertion holds
+
+    last_sprint_name = sprints[-1]["name"]
     periods = index.get("periods", [])
     escalated_events_found = False
     for period in periods:
+        if period.get("sprint") != last_sprint_name:
+            continue
         events_file = Path(PACKAGE) / period["file"]
         if not events_file.is_file():
-            continue
+            break
         data = json.loads(events_file.read_text())
         for event in data.get("events", []):
             if event.get("kind") == "escalated":
                 escalated_events_found = True
                 break
-        if escalated_events_found:
-            break
+        break  # only the last sprint's file matters for the replay page
 
     if not escalated_events_found:
-        # No escalated events in the package: the test is vacuous for AC3,
-        # but the build-doesn't-fail assertion above still holds.
+        # No escalated events in the last sprint: the test is vacuous for the
+        # replay-page assertion, but the build-doesn't-fail check still holds.
         return
 
     # The replay page's embedded JSON must carry the escalated events
@@ -205,6 +212,7 @@ def test_replay_page_carries_escalated_events():
     events = replay_data.get("events", [])
     escalated_in_replay = [e for e in events if e.get("kind") == "escalated"]
     assert escalated_in_replay, (
-        "the package records escalated events, but the replay page's JSON "
-        "carries none: the crew's own escalation record must be preserved"
+        "the package records escalated events in the last sprint, "
+        "but the replay page's JSON carries none: "
+        "the crew's own escalation record must be preserved"
     )
