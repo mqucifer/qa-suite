@@ -25,3 +25,4 @@ QA_PORT=18080 sprint-metrics/start.sh ~/path/to/sprint-metrics   # prints QA_BAS
 QA_BASE_URL=http://localhost:18080 uv run pytest sprint-metrics
 sprint-metrics/stop.sh
 ```
+

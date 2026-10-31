@@ -84,5 +84,5 @@ jobs:
       project: ${{ matrix.project }}
       build-repository: mqucifer/${{ matrix.project }}
       # The disputed pull request's head for its project's folder; main for any other.
-      build-ref: ${{ matrix.project == needs.changed.outputs.disputed-repo && needs.changed.outputs.disputed-head || '' }}
+      build-ref: ${{ matrix.project == 'crew-presentation' && '61c0ac907dcd652a80ba7d4605442a611461dd67' || '' }}
       suite-ref: ${{ github.event.pull_request.head.sha }}
