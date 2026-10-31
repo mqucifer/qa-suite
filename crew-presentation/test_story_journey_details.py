@@ -134,32 +134,39 @@ def test_journey_page_shows_event_timeline():
         slug = _slug_for_card(repo, number)
         html = page("/" + slug)
 
-        # The page must have the timeline heading
+        # The page must have the timeline heading (the card has events)
         assert "What happened, in order" in html, (
             f"{slug}: the journey page has no 'What happened, in order' heading: "
             f"the story's events are not rendered (crew-presentation#231)"
         )
 
-        # Find at least one move event whose time and destination column appear
+        # For cards that have at least one move event with a parseable timestamp
+        # and a destination column, verify at least one is visible on the page.
+        # (A card may have events that are not moves, or moves without a
+        # timestamp — those don't carry the detail the AC checks for.)
+        checkable = [
+            e
+            for e in card_events
+            if e.get("kind") in ("move", "card_moved")
+            and e.get("at")
+            and _hhmm(e["at"])
+            and e.get("to_column")
+        ]
+        if not checkable:
+            continue
+
         found = False
-        for event in card_events:
-            kind = event.get("kind", "")
-            if kind not in ("move", "card_moved"):
-                continue
-            at = event.get("at", "")
-            to_column = event.get("to_column")
-            if not at or not to_column:
-                continue
-            time_str = _hhmm(at)
-            if not time_str:
-                continue
+        for event in checkable:
+            time_str = _hhmm(event["at"])
+            to_column = event["to_column"]
             if time_str in html and to_column in html:
                 found = True
                 break
 
         assert found, (
-            f"{slug}: the journey page has the 'What happened, in order' heading "
-            f"but no move event shows both its timestamp and destination column"
+            f"{slug}: the journey page has move events in the package "
+            f"with timestamps and destination columns, but none of them "
+            f"appear in the rendered timeline"
         )
 
 
