@@ -39,6 +39,8 @@ build.py refusing the package doesn't stop the start: that's the first test.
 | `test_escalation_removed.py::test_sprint_overview_has_no_escalations_stat` | No sprint page's stats section has an 'escalations' stat: the site no longer reports sprint-metrics' escalation count or rate (mqucifer/crew-presentation#217 AC1) |
 | `test_escalation_removed.py::test_changed_trend_shows_no_escalation_entry` | The 'What changed' card never shows an escalation entry, while other changed measures still are: the number of rendered entries equals the package's non-escalation changed entries (mqucifer/crew-presentation#217 AC1+AC2) |
 | `test_escalation_removed.py::test_replay_page_carries_escalated_events` | The build does not fail and the replay page's JSON data still carries the crew's own escalated events (kind 'escalated'): only sprint-metrics' escalation_count / escalation_rate_percent are dropped (mqucifer/crew-presentation#217 AC3) |
+| `test_replay_board.py::test_replay_board_has_nine_columns_in_order` | The Board section contains exactly nine .replay-col children in DOM order (Needs Refinement through Blocked), each with a .replay-col__header showing the column name (mqucifer/crew-presentation#224 AC2) |
+| `test_replay_board.py::test_replay_board_css_prevents_overflow_at_phone_width` | site.css lays out .replay-board as a grid and a phone-width media query (max-width >= 375px) constrains it to a single column, preventing the 591px overflow the bug described (mqucifer/crew-presentation#224 AC1) |
 
 ## Running it locally
 ```sh
