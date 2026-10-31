@@ -36,6 +36,9 @@ build.py refusing the package doesn't stop the start: that's the first test.
 | `test_replay_board_cards.py::test_replay_board_cards_have_correct_hyperlink` | Each board card on the replay page contains an <a> element whose href equals the card's issue URL and whose visible text equals 'repo#number' (mqucifer/crew-presentation#226 AC2) |
 | `test_sprint_nav_link.py::test_sprint_nav_link_on_replay_html` | replay.html's Sprint link in nav[aria-label='Views'] has a non-empty href whose value names a file that exists in the build directory (mqucifer/crew-presentation#229: the href was empty, so clicking it only reloaded the same page) |
 | `test_sprint_nav_link.py::test_sprint_nav_link_on_story_pages` | Every story page under stories/ has a Sprint link in nav[aria-label='Views'] whose href, resolved relative to the story page's directory, names a file that exists in the build directory (mqucifer/crew-presentation#229) |
+| `test_escalation_removed.py::test_sprint_overview_has_no_escalations_stat` | No sprint page's stats section has an 'escalations' stat: the site no longer reports sprint-metrics' escalation count or rate (mqucifer/crew-presentation#217 AC1) |
+| `test_escalation_removed.py::test_changed_trend_shows_no_escalation_entry` | The 'What changed' card never shows an escalation entry, while other changed measures still are: the number of rendered entries equals the package's non-escalation changed entries (mqucifer/crew-presentation#217 AC1+AC2) |
+| `test_escalation_removed.py::test_replay_page_carries_escalated_events` | The build does not fail and the replay page's JSON data still carries the crew's own escalated events (kind 'escalated'): only sprint-metrics' escalation_count / escalation_rate_percent are dropped (mqucifer/crew-presentation#217 AC3) |
 
 ## Running it locally
 ```sh
