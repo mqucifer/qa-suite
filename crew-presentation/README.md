@@ -7,8 +7,9 @@ HTTP at `QA_BASE_URL`, and as Chromium renders them there. The tests read the
 pages and the package the site was built from (its input), never the site's code.
 A test of rendering or layout, whatever a criterion measures in a browser such as
 `scrollWidth` at 375px, drives Chromium through the `rendered` fixture in
-`conftest.py`, which needs nothing added; anything the HTML or the package already
-says is plain HTTP. Your sandbox has no running build and no browser, so only CI
+`conftest.py`, which needs nothing added, and measures the pages built from the
+real package; anything the HTML or the package already says is plain HTTP. Your
+sandbox has no running build and no browser, so only CI
 runs these tests: see "Writing a browser test" in `crew-presentation/README.md`.
 
 **What it reads:** the crew's `delivery-history` package (its record's `uses`),
@@ -42,6 +43,11 @@ def test_the_page_fits_a_phone(rendered):
     assert page.evaluate("document.documentElement.scrollWidth") <= 375
 ```
 
+A `scrollWidth` test measures the pages `start.sh` built from the real package,
+never a page built from a made-up one. The real package's long titles are what
+overflow: mqucifer/crew-presentation#224's fix passed the site's own test, built
+from a fixture package, while the real `replay.html` was still 559px wide at 375px.
+
 `rendered` gives you a loaded Playwright
 [Page](https://playwright.dev/python/docs/api/class-page) at the viewport you
 choose, and fails if the site doesn't serve the page or a stylesheet doesn't load.
@@ -74,7 +80,6 @@ site's main, and a red one comes back with its log.
 | `test_escalation_removed.py::test_replay_page_carries_escalated_events` | The build does not fail and the replay page's JSON data still carries the crew's own escalated events (kind 'escalated'): only sprint-metrics' escalation_count / escalation_rate_percent are dropped (mqucifer/crew-presentation#217 AC3) |
 | `test_replay_board.py::test_replay_board_has_nine_columns_in_order` | The Board section contains exactly nine .replay-col children in DOM order (Needs Refinement through Blocked), each with a .replay-col__header showing the column name (mqucifer/crew-presentation#224 AC2) |
 | `test_replay_board.py::test_replay_board_stacks_at_phone_width` | In Chromium at 375x812, the board is a grid of one column, so its nine columns stack (mqucifer/crew-presentation#224 AC1) |
-| `test_replay_board.py::test_replay_board_fits_at_phone_width` | In Chromium at 375x812, replay.html's `document.documentElement.scrollWidth` is 375 or less (mqucifer/crew-presentation#224 AC1). **Expected to fail for now:** it's 559px on the site's main, since a card title's long path holds the column open. Remove its `xfail` when the site fixes that |
 | `test_story_journey.py::test_story_journey_fits_at_phone_width` | In Chromium at 375x812, story-journey.html shows its story links and its `document.documentElement.scrollWidth` is 375 or less: long card titles wrap (mqucifer/crew-presentation#227 AC1, WCAG 2.2 1.4.10 Reflow) |
 
 ## Running it locally

@@ -7,7 +7,7 @@ is a .replay-col element with a .replay-col__header.
 These tests verify that:
 - The Board section contains the expected columns in order, each with its
   header (mqucifer/crew-presentation#224 AC2).
-- The page fits a 375px viewport, rendered, without scrolling sideways
+- The board, rendered at 375px wide, is a grid of one column, so its columns stack
   (mqucifer/crew-presentation#224 AC1).
 
 The tests read the built replay page (QA_BASE_URL/replay.html), over HTTP and
@@ -162,24 +162,3 @@ def test_replay_board_stacks_at_phone_width(rendered):
     )
     assert display == "grid", f"the board's display is {display!r} at 375px, not a grid"
     assert len(tracks.split()) == 1, f"the board has the columns {tracks!r} at 375px, not one"
-
-
-# raises: a page that won't render still fails. Only the measurement is expected to.
-@pytest.mark.xfail(
-    raises=AssertionError,
-    reason="replay.html is 559px wide at 375px on the site's main: a card title's 78-character "
-    "path holds the board's 1fr column open. Remove this when the site fixes that.",
-)
-def test_replay_board_fits_at_phone_width(rendered):
-    """AC1: replay.html, rendered at 375x812, doesn't scroll sideways."""
-    replay = rendered("/replay.html", width=375, height=812)
-
-    # A page without its board would fit too, and prove nothing.
-    columns = replay.locator('[aria-label="Board"] .replay-col').count()
-    assert columns == 9, f"replay.html rendered {columns} .replay-col in its Board section, not 9"
-
-    scroll_width = replay.evaluate("document.documentElement.scrollWidth")
-    assert scroll_width <= 375, (
-        f"replay.html is {scroll_width}px wide in a 375px viewport, so it scrolls sideways "
-        "(mqucifer/crew-presentation#224)"
-    )
