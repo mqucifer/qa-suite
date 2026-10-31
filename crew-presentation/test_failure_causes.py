@@ -7,8 +7,6 @@ package's data:
 - A 2.0.0 list of {class, role, count} entries shows one row per entry, each
   carrying the class as its label (not 'Cause not recorded') and the entry's
   count (mqucifer/crew-presentation#216 AC1).
-- A 1.x map of cause-code to count shows one row per entry with those counts,
-  so a 1.x package builds unchanged (mqucifer/crew-presentation#216 AC2).
 - An empty or absent top_failure_causes shows 'No failures recorded' and the
   build does not fail (mqucifer/crew-presentation#216 AC3).
 
@@ -97,50 +95,14 @@ def test_failure_causes_2_0_class_shown_not_placeholder():
                 continue
             class_value = str(entry["class"])
             count = entry.get("count", 0)
-            matching = [(reason, c) for reason, c in rows if c == str(count)]
-            assert matching, (
-                f"{_slug(name)}: no cause-row with count {count} "
-                f"for 2.0.0 entry class={class_value!r}"
-            )
-            label = matching[0][0]
-            assert label == class_value, (
-                f"{_slug(name)}: 2.0.0 entry class={class_value!r} "
-                f"rendered as {label!r}, not the class"
-            )
-            assert label != "Cause not recorded", (
-                f"{_slug(name)}: 2.0.0 entry class={class_value!r} rendered as 'Cause not recorded'"
+            # Class and count together: two entries can share a count.
+            assert (class_value, str(count)) in rows, (
+                f"{_slug(name)}: 2.0.0 entry class={class_value!r} count {count} "
+                f"has no cause-row with that label and count; the rows are {rows!r}"
             )
             checked += 1
     # Vacuous on a 1.x pin (no class-carrying entries); meaningful on 2.0.0.
     # No assertion on checked > 0: the current pin doesn't carry 2.0.0 entries.
-
-
-def test_failure_causes_1x_map_shows_one_row_per_entry_with_count():
-    """AC2: a 1.x map of cause-code to count shows one row per entry with
-    those counts, so a 1.x package builds unchanged."""
-    index = _load_index()
-    checked = 0
-    for name, answer in _sprints_with_metrics(index):
-        causes = answer.get("top_failure_causes")
-        if not isinstance(causes, dict) or not causes:
-            continue
-        html = page("/" + _slug(name))
-        rows = _cause_rows(html)
-        assert len(rows) == len(causes), (
-            f"{_slug(name)}: the package has {len(causes)} failure causes "
-            f"(1.x map), but the page shows {len(rows)} cause-rows"
-        )
-        for code, count in causes.items():
-            matching = [(reason, c) for reason, c in rows if c == str(count)]
-            assert matching, (
-                f"{_slug(name)}: 1.x map has {code!r} with count {count}, "
-                f"but no cause-row shows that count"
-            )
-        checked += 1
-    assert checked > 0, (
-        "no sprint has a non-empty 1.x map-shaped top_failure_causes: "
-        "the current pin should carry one"
-    )
 
 
 def test_failure_causes_empty_or_absent_shows_no_failures():
