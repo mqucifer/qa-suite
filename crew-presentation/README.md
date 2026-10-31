@@ -34,6 +34,8 @@ build.py refusing the package doesn't stop the start: that's the first test.
 | `test_delivery_history_major_2.py::test_a_major_2_package_builds_the_expected_pages` | A well-formed major-2 package builds and writes one sprint-overview page per sprint, one story page per card, and the replay page (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
 | `test_replay_board_cards.py::test_replay_board_cards_render_links_not_markdown` | No board card element on the replay page contains the literal markdown string '[repo#number](url)': the reference is rendered as a hyperlink, not raw syntax (mqucifer/crew-presentation#226 AC1) |
 | `test_replay_board_cards.py::test_replay_board_cards_have_correct_hyperlink` | Each board card on the replay page contains an <a> element whose href equals the card's issue URL and whose visible text equals 'repo#number' (mqucifer/crew-presentation#226 AC2) |
+| `test_sprint_nav_link.py::test_sprint_nav_link_on_replay_html` | replay.html's Sprint link in nav[aria-label='Views'] has a non-empty href whose value names a file that exists in the build directory (mqucifer/crew-presentation#229: the href was empty, so clicking it only reloaded the same page) |
+| `test_sprint_nav_link.py::test_sprint_nav_link_on_story_pages` | Every story page under stories/ has a Sprint link in nav[aria-label='Views'] whose href, resolved relative to the story page's directory, names a file that exists in the build directory (mqucifer/crew-presentation#229) |
 
 ## Running it locally
 ```sh
