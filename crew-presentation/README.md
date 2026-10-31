@@ -32,6 +32,8 @@ build.py refusing the package doesn't stop the start: that's the first test.
 | `test_failure_causes.py::test_failure_causes_empty_or_absent_shows_no_failures` | An empty or absent top_failure_causes shows 'No failures recorded' and no cause-rows; the build does not fail (mqucifer/crew-presentation#216 AC3) |
 | `test_delivery_history_major_2.py::test_a_major_2_package_is_accepted` | build.py accepts a package on schema major 2: the check does not refuse it as an unsupported major (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
 | `test_delivery_history_major_2.py::test_a_major_2_package_builds_the_expected_pages` | A well-formed major-2 package builds and writes one sprint-overview page per sprint, one story page per card, and the replay page (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
+| `test_replay_board_cards.py::test_replay_board_cards_render_links_not_markdown` | No board card element on the replay page contains the literal markdown string '[repo#number](url)': the reference is rendered as a hyperlink, not raw syntax (mqucifer/crew-presentation#226 AC1) |
+| `test_replay_board_cards.py::test_replay_board_cards_have_correct_hyperlink` | Each board card on the replay page contains an <a> element whose href equals the card's issue URL and whose visible text equals 'repo#number' (mqucifer/crew-presentation#226 AC2) |
 
 ## Running it locally
 ```sh
