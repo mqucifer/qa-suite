@@ -44,8 +44,8 @@ def test_the_page_fits_a_phone(rendered):
 ```
 
 A `scrollWidth` test measures the pages `start.sh` built from the real package,
-never a page built from a made-up one. The real package's long titles are what
-overflow: mqucifer/crew-presentation#224's fix passed the site's own test, built
+never a page built from a made-up one. The real package's long titles were what
+overflowed: mqucifer/crew-presentation#224's fix passed the site's own test, built
 from a fixture package, while the real `replay.html` was still 559px wide at 375px.
 
 `rendered` gives you a loaded Playwright
@@ -67,7 +67,6 @@ site's main, and a red one comes back with its log.
 | `test_sprint_overview.py::test_attempt_row_count_matches_package_stories` | The attempt chart shows one row per story the package records for that sprint; no rows are cut to match sprint-metrics' denominator (mqucifer/crew-presentation#206) |
 | `test_sprint_overview.py::test_first_try_story_shows_first_try_regardless_of_position` | A story whose pattern is 'first_try' shows 'first try' as its badge regardless of its position in the list (mqucifer/crew-presentation#206: the old code would label it 'merged' if its position exceeded the numerator) |
 | `test_failure_causes.py::test_failure_causes_2_0_class_shown_not_placeholder` | A 2.0.0 entry carrying a class shows the class as its label in the cause section, not the 'Cause not recorded' placeholder, with its count preserved (mqucifer/crew-presentation#216 AC1) |
-| `test_failure_causes.py::test_failure_causes_1x_map_shows_one_row_per_entry_with_count` | A 1.x map of cause-code to count shows one row per entry with those counts, so a 1.x package builds unchanged (mqucifer/crew-presentation#216 AC2) |
 | `test_failure_causes.py::test_failure_causes_empty_or_absent_shows_no_failures` | An empty or absent top_failure_causes shows 'No failures recorded' and no cause-rows; the build does not fail (mqucifer/crew-presentation#216 AC3) |
 | `test_delivery_history_major_2.py::test_a_major_2_package_is_accepted` | build.py accepts a package on schema major 2: the check does not refuse it as an unsupported major (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
 | `test_delivery_history_major_2.py::test_a_major_2_package_builds_the_expected_pages` | A well-formed major-2 package builds and writes one sprint-overview page per sprint, one story page per card, and the replay page (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
@@ -88,8 +87,8 @@ site's main, and a red one comes back with its log.
 | `test_story_journey_details.py::test_journey_page_shows_event_timeline` | A story page for a card that has move events in the package's periods contains the heading 'What happened, in order' and at least one move event's timestamp (HH:MM) and destination column (mqucifer/crew-presentation#231 AC1: the buggy version showed no events at all) |
 | `test_story_journey_details.py::test_journey_page_shows_cost_section` | A story page for a card whose analysis.stories entry has wall_clock_seconds and cost.model_calls contains the heading 'What it cost' with the wall-clock formatted as hours and minutes and the model calls count (mqucifer/crew-presentation#231 AC2: the buggy version showed no cost section) |
 | `test_story_journey_details.py::test_journey_page_omits_cost_when_no_wall_clock` | A story page for a card whose wall_clock_seconds is null does NOT contain 'What it cost', even when the card has events: the cost section is absent when the data is missing (mqucifer/crew-presentation#231 AC3) |
-| `test_browser.py::test_replay_page_scrollwidth_at_phone_width_with_real_titles` | replay.html, built from the real package, has documentElement.scrollWidth of 375 or less at a 375px viewport when a card title on the board contains an unbreakable string of at least 40 characters (mqucifer/crew-presentation#246 AC1: the board column's auto minimum width allowed the long word to push the page to 559px) |
-| `test_browser.py::test_replay_card_shows_full_long_title` | The .replay-card holding a card title with a long unbreakable string (>= 40 chars, no whitespace) renders the full title in its text content — the word wraps rather than being clipped or ellipsized (mqucifer/crew-presentation#246 AC2) |
+| `test_browser.py::test_replay_page_scrollwidth_at_phone_width_with_real_titles` | replay.html, built from the real package, has documentElement.scrollWidth of 375 or less at a 375px viewport, whatever titles the package holds (mqucifer/crew-presentation#246 AC1: the board column's auto minimum width allowed a long word to push the page to 559px) |
+| `test_browser.py::test_replay_cards_show_their_full_titles` | Every .replay-card on the board renders its card's full title from the package, and the card's content fits its box at 375px: the title wraps rather than being clipped or ellipsized (mqucifer/crew-presentation#246 AC2) |
 
 ## Running it locally
 ```sh

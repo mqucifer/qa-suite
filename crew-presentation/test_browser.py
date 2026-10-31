@@ -16,7 +16,10 @@ These tests check that:
 - AC2 (#230): a story page's 'Replay' link resolves to a file in the build
 - AC3 (#230): story-journey.html (root level) 'Replay' link resolves to a file in the build
 - AC1 (#246): replay.html, built from the real package, has scrollWidth <= 375 at a 375px viewport
-- AC2 (#246): the .replay-card holding the long title shows the full title (wrapped, not clipped)
+- AC2 (#246): every .replay-card on the board shows its full title (wrapped, not clipped)
+
+The real package may hold no long word, so these hold for whatever it has. The long
+word itself is crew-presentation's own test_replay_page_scrollwidth_at_phone_width.
 """
 
 from __future__ import annotations
@@ -153,113 +156,45 @@ def test_story_journey_replay_link_resolves():
 # ---------------------------------------------------------------------------
 
 
-def _find_long_unbreakable_title() -> str | None:
-    """Find a card title in the package that contains an unbreakable string of
-    at least 40 characters with no whitespace.
-
-    Returns the card's full title if found, or None if no such card exists
-    among the cards that appear on the replay board.
-    """
-    index = json.loads((Path(PACKAGE) / "delivery-history.json").read_text())
-    sprints = index.get("sprints", [])
-    if not sprints:
-        return None
-    sprint_name = sprints[-1].get("name", "")
-
-    # Load events for the last sprint (the replay page shows that sprint's board)
-    pkg = Path(PACKAGE)
-    events = []
-    for period in index.get("periods", []):
-        if period.get("sprint") == sprint_name:
-            events_file = pkg / period["file"]
-            if events_file.is_file():
-                events = json.loads(events_file.read_text()).get("events", [])
-            break
-    if not events:
-        return None
-
-    # Find cards that appear on the board: cards with at least one event
-    card_refs_on_board: set[tuple] = set()
-    for event in events:
-        card_ref = event.get("card")
-        if card_ref:
-            card_refs_on_board.add((card_ref.get("number"), card_ref.get("repo")))
-
-    # Look for a card whose title has an unbreakable substring of >= 40 chars
-    for card in index.get("cards", []):
-        key = (card.get("number"), card.get("repo"))
-        if key not in card_refs_on_board:
-            continue
-        title = card.get("title", "")
-        # Split by whitespace: any piece of 40+ chars is an unbreakable string
-        for word in title.split():
-            if len(word) >= 40:
-                return title
-    return None
-
-
 def test_replay_page_scrollwidth_at_phone_width_with_real_titles(rendered):
     """AC1 (#246): replay.html, built from the real package, has scrollWidth
-    of 375 or less at a 375px viewport.
-
-    The real package's card titles include long unbreakable strings (e.g.
-    test names like 'crew-presentation/test_reads_crew.py::test_a_sprints_page_
-    shows_its_throughput'). Without minmax(0, 1fr) on the board column and
-    overflow-wrap on the card, the page overflows past 375px.
+    of 375 or less at a 375px viewport, whatever titles the package holds.
     """
-    long_title = _find_long_unbreakable_title()
-    assert long_title, (
-        "no card on the replay board has a title with an unbreakable string "
-        "of at least 40 characters: the test needs such a title to prove "
-        "the fix (mqucifer/crew-presentation#246)"
-    )
-
     replay = rendered("/replay.html", width=375, height=812)
     scroll_width = replay.evaluate("document.documentElement.scrollWidth")
     assert scroll_width <= 375, (
         f"replay.html is {scroll_width}px wide in a 375px viewport (mqucifer/"
-        f"crew-presentation#246: a long unbreakable card title overflows the "
+        f"crew-presentation#246: a long unbreakable card title overflowed the "
         f"board column)"
     )
 
 
-def test_replay_card_shows_full_long_title(rendered):
-    """AC2 (#246): the .replay-card holding a long unbreakable title renders
-    the full title text (wrapped, not clipped or ellipsized).
+def test_replay_cards_show_their_full_titles(rendered):
+    """AC2 (#246): every .replay-card on the board renders its card's full title
+    from the package, wrapped rather than clipped or ellipsized.
 
-    Given the replay page shows a .replay-card whose title contains an
-    unbreakable string of at least 40 characters, when that card is inspected,
-    its rendered text content contains every character of the full title.
+    A card is matched to the package by its link's href, the card's url.
     """
-    long_title = _find_long_unbreakable_title()
-    assert long_title, (
-        "no card on the replay board has a title with an unbreakable string "
-        "of at least 40 characters: the test needs such a title to prove "
-        "the fix (mqucifer/crew-presentation#246)"
-    )
+    index = json.loads((Path(PACKAGE) / "delivery-history.json").read_text())
+    titles = {card.get("url"): card.get("title", "") for card in index.get("cards", [])}
 
     replay = rendered("/replay.html", width=375, height=812)
-
-    # Find the .replay-card that contains the long title
-    card_handle = replay.evaluate_handle(
-        """(title) => {
-            const cards = document.querySelectorAll('.replay-card');
-            for (const c of cards) {
-                if (c.textContent.includes(title)) return c;
-            }
-            return null;
-        }""",
-        long_title,
+    cards = replay.evaluate(
+        """() => [...document.querySelectorAll('.replay-card')].map((card) => ({
+            href: card.querySelector('a')?.getAttribute('href'),
+            text: card.textContent,
+            clipped: card.scrollWidth > card.clientWidth,
+        }))"""
     )
-    assert card_handle is not None, (
-        f"no .replay-card contains the title {long_title!r}: "
-        "the card is not rendered on the replay page"
-    )
-
-    # The full title must be present in the rendered text
-    card_text = card_handle.evaluate("el => el.textContent")
-    assert long_title in card_text, (
-        f"the .replay-card's text {card_text!r} does not contain the full "
-        f"title {long_title!r}: the long unbreakable word is clipped or "
-        f"ellipsized rather than wrapped"
-    )
+    for card in cards:
+        assert card["href"] in titles, (
+            f"a .replay-card links to {card['href']!r}, which no card in the package has"
+        )
+        title = titles[card["href"]]
+        assert title in card["text"], (
+            f"the .replay-card's text {card['text']!r} does not contain the full title {title!r}"
+        )
+        assert not card["clipped"], (
+            f"the .replay-card for {title!r} is wider than its box at 375px: "
+            "its title is clipped rather than wrapped"
+        )
