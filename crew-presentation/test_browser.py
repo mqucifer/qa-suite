@@ -1,4 +1,4 @@
-"""crew-presentation's view nav: 'A story's journey' and 'Replay' links resolve from stories/ subdirectory.
+"""crew-presentation's view nav and replay board at phone width.
 
 mqucifer/crew-presentation#230: the header's 'A story's journey' and 'Replay' nav
 links in story pages used root-relative paths (story-journey.html, replay.html),
@@ -6,10 +6,17 @@ which from the stories/ subdirectory resolved to stories/story-journey.html and
 stories/replay.html — files that don't exist. The build only creates root-level
 versions. From the site's deepest view the reader could not navigate anywhere.
 
+mqucifer/crew-presentation#246: a card title holding a long unbreakable word
+(e.g. a 78-character test name) set the board column's min-content width past
+375px. The .replay-board's 1fr column had an auto minimum, so it couldn't shrink
+below that word, and .replay-card had no overflow-wrap to break it.
+
 These tests check that:
-- AC1: a story page's 'A story's journey' link resolves to a file in the build
-- AC2: a story page's 'Replay' link resolves to a file in the build
-- AC3: story-journey.html (root level) 'Replay' link resolves to a file in the build
+- AC1 (#230): a story page's 'A story's journey' link resolves to a file in the build
+- AC2 (#230): a story page's 'Replay' link resolves to a file in the build
+- AC3 (#230): story-journey.html (root level) 'Replay' link resolves to a file in the build
+- AC1 (#246): replay.html, built from the real package, has scrollWidth <= 375 at a 375px viewport
+- AC2 (#246): the .replay-card holding the long title shows the full title (wrapped, not clipped)
 """
 
 from __future__ import annotations
@@ -138,4 +145,121 @@ def test_story_journey_replay_link_resolves():
     assert _url_is_file(resolved), (
         f"story-journey.html: the 'Replay' nav link points to {href!r}, "
         f"which resolves to {resolved} but does not name a file in the build directory"
+    )
+
+
+# ---------------------------------------------------------------------------
+# mqucifer/crew-presentation#246: replay page fits a phone with real titles
+# ---------------------------------------------------------------------------
+
+
+def _find_long_unbreakable_title() -> str | None:
+    """Find a card title in the package that contains an unbreakable string of
+    at least 40 characters with no whitespace.
+
+    Returns the card's full title if found, or None if no such card exists
+    among the cards that appear on the replay board.
+    """
+    index = json.loads((Path(PACKAGE) / "delivery-history.json").read_text())
+    sprints = index.get("sprints", [])
+    if not sprints:
+        return None
+    sprint_name = sprints[-1].get("name", "")
+
+    # Load events for the last sprint (the replay page shows that sprint's board)
+    pkg = Path(PACKAGE)
+    events = []
+    for period in index.get("periods", []):
+        if period.get("sprint") == sprint_name:
+            events_file = pkg / period["file"]
+            if events_file.is_file():
+                events = json.loads(events_file.read_text()).get("events", [])
+            break
+    if not events:
+        return None
+
+    # Find cards that appear on the board: cards with at least one event
+    card_refs_on_board: set[tuple] = set()
+    for event in events:
+        card_ref = event.get("card")
+        if card_ref:
+            card_refs_on_board.add((card_ref.get("number"), card_ref.get("repo")))
+
+    # Look for a card whose title has an unbreakable substring of >= 40 chars
+    for card in index.get("cards", []):
+        key = (card.get("number"), card.get("repo"))
+        if key not in card_refs_on_board:
+            continue
+        title = card.get("title", "")
+        # Split by whitespace: any piece of 40+ chars is an unbreakable string
+        for word in title.split():
+            if len(word) >= 40:
+                return title
+    return None
+
+
+def test_replay_page_scrollwidth_at_phone_width_with_real_titles(rendered):
+    """AC1 (#246): replay.html, built from the real package, has scrollWidth
+    of 375 or less at a 375px viewport.
+
+    The real package's card titles include long unbreakable strings (e.g.
+    test names like 'crew-presentation/test_reads_crew.py::test_a_sprints_page_
+    shows_its_throughput'). Without minmax(0, 1fr) on the board column and
+    overflow-wrap on the card, the page overflows past 375px.
+    """
+    long_title = _find_long_unbreakable_title()
+    assert long_title, (
+        "no card on the replay board has a title with an unbreakable string "
+        "of at least 40 characters: the test needs such a title to prove "
+        "the fix (mqucifer/crew-presentation#246)"
+    )
+
+    replay = rendered("/replay.html", width=375, height=812)
+    scroll_width = replay.evaluate("document.documentElement.scrollWidth")
+    assert scroll_width <= 375, (
+        f"replay.html is {scroll_width}px wide in a 375px viewport (mqucifer/"
+        f"crew-presentation#246: a long unbreakable card title overflows the "
+        f"board column)"
+    )
+
+
+def test_replay_card_shows_full_long_title(rendered):
+    """AC2 (#246): the .replay-card holding a long unbreakable title renders
+    the full title text (wrapped, not clipped or ellipsized).
+
+    Given the replay page shows a .replay-card whose title contains an
+    unbreakable string of at least 40 characters, when that card is inspected,
+    its rendered text content contains every character of the full title.
+    """
+    long_title = _find_long_unbreakable_title()
+    assert long_title, (
+        "no card on the replay board has a title with an unbreakable string "
+        "of at least 40 characters: the test needs such a title to prove "
+        "the fix (mqucifer/crew-presentation#246)"
+    )
+
+    replay = rendered("/replay.html", width=375, height=812)
+
+    # Find the .replay-card that contains the long title
+    card_handle = replay.evaluate_handle(
+        """(title) => {
+            const cards = document.querySelectorAll('.replay-card');
+            for (const c of cards) {
+                if (c.textContent.includes(title)) return c;
+            }
+            return null;
+        }""",
+        long_title,
+    )
+    assert card_handle is not None, (
+        f"no .replay-card contains the title {long_title!r}: "
+        "the card is not rendered on the replay page"
+    )
+
+    # The full title must be present in the rendered text
+    card_text = card_handle.evaluate("el => el.textContent")
+    assert long_title in card_text, (
+        f"the .replay-card's text {card_text!r} does not contain the full "
+        f"title {long_title!r}: the long unbreakable word is clipped or "
+        f"ellipsized rather than wrapped"
     )
