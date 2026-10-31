@@ -71,7 +71,6 @@ def test_cycle_time_stat_matches_package_value():
     sprints = [s for s in index.get("sprints", []) if s["name"] in answers]
     assert sprints, "the package has no sprint with sprint-metrics' answers"
 
-    checked_null = 0
     for sprint in sprints:
         name = sprint["name"]
         metrics = answers[name]
@@ -90,5 +89,3 @@ def test_cycle_time_stat_matches_package_value():
             f"{slug}: cycle_time_minutes is {cycle_time!r} in the package, "
             f"expected {expected!r} in the cycle-time stat, got {shown!r}"
         )
-        if cycle_time is None:
-            checked_null += 1
