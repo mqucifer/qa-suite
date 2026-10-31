@@ -9,8 +9,8 @@ A test of rendering or layout, whatever a criterion measures in a browser such a
 `scrollWidth` at 375px, drives Chromium through the `rendered` fixture in
 `conftest.py`, which needs nothing added, and measures the pages built from the
 real package; anything the HTML or the package already says is plain HTTP. Your
-sandbox has no running build and no browser, so only CI
-runs these tests: see "Writing a browser test" in `crew-presentation/README.md`.
+sandbox has no running build and no browser, so only CI runs these tests: see
+"Writing a browser test" in `crew-presentation/README.md`.
 
 **What it reads:** the crew's `delivery-history` package (its record's `uses`),
 at the release its `delivery-history.tag` names. These tests run on
