@@ -47,7 +47,8 @@ intent:
     - A check is never weakened to make something pass.
 design:
   language: Python 3.12
-  dependencies: 'Runtime: pytest>=8.0. Dev: ruff>=0.6.'
+  dependencies: 'Runtime: pytest>=8.0. Browser, only for a folder whose start.sh syncs
+    the `browser` group: playwright==1.52.0. Dev: ruff>=0.6.'
   sandbox: Python 3.12 and uv. The tests need a running build, which only CI
     starts, so the local checks lint and format; CI runs the tests.
   setup: uv sync --extra dev --quiet

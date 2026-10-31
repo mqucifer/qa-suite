@@ -8,6 +8,10 @@
 # The package is the one the site reads from the crew (its record's `uses`): the
 # release the checkout's delivery-history.tag names, as the site's setup fetches it.
 #
+# It also installs Playwright and Chromium, for the tests that render a page
+# (conftest.py). Here and not in qa.yml, so only this project's run pays for them:
+# qa.yml's `uv run` adds what the lockfile requires and removes nothing.
+#
 # build.py refusing the package isn't a start failure: it's what the tests are
 # for. Its exit status and log go to $STATE for test_reads_crew.py, and the
 # server serves whatever it built. Writes QA_BASE_URL and QA_SITE_STATE to
@@ -40,6 +44,14 @@ url="https://github.com/mqucifer/crew/releases/download/$tag/$tag.tar.gz"
 curl -sfL "$url" | tar -xz -C "$checkout/.package" || fail "couldn't fetch $url"
 [ -f "$package/manifest.json" ] || fail "$tag's archive has no $tag/manifest.json"
 echo "The package: the release $tag, which delivery-history.tag names"
+
+suite=$(dirname "$here")
+uv sync -q --project "$suite" --locked --group browser \
+  || fail "Playwright didn't install from qa-suite's uv.lock"
+# shellcheck disable=SC2086 # empty off Actions, where the runner's libraries aren't ours to change.
+uv run -q --project "$suite" --locked --group browser \
+  playwright install ${GITHUB_ACTIONS:+--with-deps} --only-shell chromium \
+  || fail "Chromium didn't install"
 
 uv sync -q --project "$checkout" --frozen --no-dev || fail "the site's dependencies didn't install from its uv.lock"
 set +e

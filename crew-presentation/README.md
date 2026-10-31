@@ -3,8 +3,14 @@
 QA's functional tests for `mqucifer/crew-presentation`, the crew's public site.
 
 **The surface:** the site's pages, as its `build.py` writes them, served over
-HTTP at `QA_BASE_URL`. The tests read the pages and the package the site was
-built from (its input), never the site's code.
+HTTP at `QA_BASE_URL`, and as Chromium renders them there. The tests read the
+pages and the package the site was built from (its input), never the site's code.
+A test of rendering or layout, whatever a criterion measures in a browser such as
+`scrollWidth` at 375px, drives Chromium through the `rendered` fixture in
+`conftest.py`, which needs nothing added, and measures the pages built from the
+real package; anything the HTML or the package already says is plain HTTP. Your
+sandbox has no running build and no browser, so only CI runs these tests: see
+"Writing a browser test" in `crew-presentation/README.md`.
 
 **What it reads:** the crew's `delivery-history` package (its record's `uses`),
 at the release its `delivery-history.tag` names. These tests run on
@@ -19,6 +25,39 @@ fetches it.
 
 build.py refusing the package doesn't stop the start: that's the first test.
 `stop.sh` prints build.py's log and stops the server.
+
+**The browser:** `start.sh` also installs Playwright (`playwright==1.52.0`, the
+version crew-presentation's own tests use, from the root `uv.lock`'s `browser`
+group) and Chromium's headless shell, so only this folder's runs pay for them.
+
+## Writing a browser test
+Use the browser when the bug or the criterion is in what the reader sees: layout,
+overflow, anything computed from the CSS. A check of the CSS's text doesn't prove
+the page fits, and a check of the HTML passes with or without a CSS bug. Use plain
+HTTP when the page's HTML or the package already says it: it's faster and needs
+no browser.
+
+```python
+def test_the_page_fits_a_phone(rendered):
+    page = rendered("/replay.html", width=375, height=812)
+    assert page.evaluate("document.documentElement.scrollWidth") <= 375
+```
+
+A `scrollWidth` test measures the pages `start.sh` built from the real package,
+never a page built from a made-up one. The real package's long titles are what
+overflow: mqucifer/crew-presentation#224's fix passed the site's own test, built
+from a fixture package, while the real `replay.html` was still 559px wide at 375px.
+
+`rendered` gives you a loaded Playwright
+[Page](https://playwright.dev/python/docs/api/class-page) at the viewport you
+choose, and fails if the site doesn't serve the page or a stylesheet doesn't load.
+
+A QA session's sandbox has no running build and no browser, and its checks only
+lint and format, so a browser test can't be run there. Write it from what the site
+does: `.project/crew-presentation/` has the templates and CSS to find your
+selectors in, and its `tests/test_browser.py` shows what the site's own Playwright
+tests measure. Then open the pull request: `suite.yml` runs the test against the
+site's main, and a red one comes back with its log.
 
 | Test | What it proves |
 |---|---|
@@ -40,8 +79,8 @@ build.py refusing the package doesn't stop the start: that's the first test.
 | `test_escalation_removed.py::test_changed_trend_shows_no_escalation_entry` | The 'What changed' card never shows an escalation entry, while other changed measures still are: the number of rendered entries equals the package's non-escalation changed entries (mqucifer/crew-presentation#217 AC1+AC2) |
 | `test_escalation_removed.py::test_replay_page_carries_escalated_events` | The build does not fail and the replay page's JSON data still carries the crew's own escalated events (kind 'escalated'): only sprint-metrics' escalation_count / escalation_rate_percent are dropped (mqucifer/crew-presentation#217 AC3) |
 | `test_replay_board.py::test_replay_board_has_nine_columns_in_order` | The Board section contains exactly nine .replay-col children in DOM order (Needs Refinement through Blocked), each with a .replay-col__header showing the column name (mqucifer/crew-presentation#224 AC2) |
-| `test_replay_board.py::test_replay_board_css_prevents_overflow_at_phone_width` | site.css lays out .replay-board as a grid and a phone-width media query (max-width >= 375px) constrains it to a single column, preventing the 591px overflow the bug described (mqucifer/crew-presentation#224 AC1) |
-| `test_story_journey.py::test_story_journey_links_wrap_not_scroll` | site.css sets overflow-wrap, word-wrap, or word-break on anchors within the story list (section/ul/li) so long card titles wrap rather than force horizontal scroll at a 375px viewport (mqucifer/crew-presentation#227 AC1, WCAG 2.2 1.4.10 Reflow) |
+| `test_replay_board.py::test_replay_board_stacks_at_phone_width` | In Chromium at 375x812, the board is a grid of one column, so its nine columns stack (mqucifer/crew-presentation#224 AC1) |
+| `test_story_journey.py::test_story_journey_fits_at_phone_width` | In Chromium at 375x812, story-journey.html shows its story links and its `document.documentElement.scrollWidth` is 375 or less: long card titles wrap (mqucifer/crew-presentation#227 AC1, WCAG 2.2 1.4.10 Reflow) |
 | `test_browser.py::test_story_page_journey_link_resolves` | A story page's 'A story's journey' link in nav[aria-label='Views'] has an href that, resolved from the stories/ subdirectory, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC1: the link was root-relative, resolving to stories/story-journey.html which doesn't exist) |
 | `test_browser.py::test_story_page_replay_link_resolves` | A story page's 'Replay' link in nav[aria-label='Views'] has an href that, resolved from the stories/ subdirectory, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC2: the link was root-relative, resolving to stories/replay.html which doesn't exist) |
 | `test_browser.py::test_story_journey_replay_link_resolves` | story-journey.html's 'Replay' link in nav[aria-label='Views'] has an href that, resolved from the build root, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC3) |
@@ -53,3 +92,6 @@ crew-presentation/start.sh ~/path/to/crew-presentation   # prints the three vari
 QA_BASE_URL=... QA_SITE_STATE=... QA_PACKAGE=... uv run pytest crew-presentation
 crew-presentation/stop.sh
 ```
+
+`start.sh` installs Playwright into qa-suite's `.venv` and Chromium into
+Playwright's cache. Off Linux CI, install Chromium's system libraries yourself.
