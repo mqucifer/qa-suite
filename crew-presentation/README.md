@@ -41,6 +41,7 @@ build.py refusing the package doesn't stop the start: that's the first test.
 | `test_escalation_removed.py::test_replay_page_carries_escalated_events` | The build does not fail and the replay page's JSON data still carries the crew's own escalated events (kind 'escalated'): only sprint-metrics' escalation_count / escalation_rate_percent are dropped (mqucifer/crew-presentation#217 AC3) |
 | `test_replay_board.py::test_replay_board_has_nine_columns_in_order` | The Board section contains exactly nine .replay-col children in DOM order (Needs Refinement through Blocked), each with a .replay-col__header showing the column name (mqucifer/crew-presentation#224 AC2) |
 | `test_replay_board.py::test_replay_board_css_prevents_overflow_at_phone_width` | site.css lays out .replay-board as a grid and a phone-width media query (max-width >= 375px) constrains it to a single column, preventing the 591px overflow the bug described (mqucifer/crew-presentation#224 AC1) |
+| `test_story_journey.py::test_story_journey_links_wrap_not_scroll` | site.css sets overflow-wrap, word-wrap, or word-break on anchors within the story list (section/ul/li) so long card titles wrap rather than force horizontal scroll at a 375px viewport (mqucifer/crew-presentation#227 AC1, WCAG 2.2 1.4.10 Reflow) |
 
 ## Running it locally
 ```sh
