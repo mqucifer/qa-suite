@@ -8,6 +8,11 @@ dependencies = ["pytest>=8.0"]
 [project.optional-dependencies]
 dev = ["ruff>=0.6"]
 
+# Only a folder whose `start.sh` syncs it pays for it: crew-presentation's, whose
+# tests render pages. The version is the one crew-presentation's own tests use.
+[dependency-groups]
+browser = ["playwright==1.52.0"]
+
 [tool.uv]
 package = false
 

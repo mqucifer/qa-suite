@@ -61,6 +61,10 @@ committed.
 | `stop.sh` | Prints the build's log and removes what `start.sh` started, even after a part-way start |
 | `test_*.py` | The tests, through the surface only |
 
+A folder whose tests need more than pytest, such as a browser, installs it from its
+own `start.sh`, from a dependency group in the root `uv.lock`, so no other project's
+run pays for it. crew-presentation's does.
+
 | Project | Surface |
 |---|---|
 | [`sprint-metrics/`](sprint-metrics/README.md) | Its HTTP service |

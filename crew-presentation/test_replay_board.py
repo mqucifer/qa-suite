@@ -7,12 +7,11 @@ is a .replay-col element with a .replay-col__header.
 These tests verify that:
 - The Board section contains the expected columns in order, each with its
   header (mqucifer/crew-presentation#224 AC2).
-- The CSS constrains the board at phone width so it does not overflow a
-  375px viewport (mqucifer/crew-presentation#224 AC1).
+- The board, rendered at 375px wide, is a grid of one column, so its columns stack
+  (mqucifer/crew-presentation#224 AC1).
 
-The tests read the built replay page (QA_BASE_URL/replay.html) and the site's
-CSS (QA_BASE_URL/css/site.css), plus the package (QA_PACKAGE) to determine
-expected columns.
+The tests read the built replay page (QA_BASE_URL/replay.html), over HTTP and
+rendered in Chromium, plus the package (QA_PACKAGE) to determine expected columns.
 """
 
 from __future__ import annotations
@@ -90,20 +89,6 @@ def _expected_columns(index: dict, sprint_name: str) -> list[str]:
     return _board_column_order(columns)
 
 
-def _extract_block_content(text: str, open_brace_pos: int) -> str:
-    """Given the position of an opening brace, return the content of that block
-    by matching braces (handles nested blocks)."""
-    depth = 0
-    for i in range(open_brace_pos, len(text)):
-        if text[i] == "{":
-            depth += 1
-        elif text[i] == "}":
-            depth -= 1
-            if depth == 0:
-                return text[open_brace_pos + 1 : i]
-    return text[open_brace_pos + 1 :]
-
-
 def _board_section_headers(html: str) -> list[str]:
     """Extract the text of each .replay-col__header within the Board section.
 
@@ -131,32 +116,6 @@ def _board_col_count(html: str) -> int:
         pytest.fail("replay.html has no <section aria-label='Board'>")
     board_html = board_match.group(1)
     return len(re.findall(r'<div class="replay-col">', board_html))
-
-
-def _media_block_contents_at_least_width(css: str, min_width: int) -> list[str]:
-    """Return the content of all @media (max-width: Npx) blocks where N >= min_width."""
-    blocks = []
-    for match in re.finditer(r"@media\s*\(\s*max-width:\s*(\d+)px\s*\)\s*\{", css):
-        width = int(match.group(1))
-        if width >= min_width:
-            open_brace = match.end() - 1  # position of the opening {
-            blocks.append(_extract_block_content(css, open_brace))
-    return blocks
-
-
-def _rules_for_selector_in_block(block: str, selector: str) -> list[str]:
-    """Find rule bodies within a CSS block whose selector includes the given string.
-
-    Handles simple rules (no nested braces in the body), which is the structure
-    of rules within a media query.
-    """
-    rules = []
-    # Match: selector { body } where body has no nested braces
-    for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", block):
-        selector_text = match.group(1).strip()
-        if selector in selector_text:
-            rules.append(match.group(2))
-    return rules
 
 
 def test_replay_board_has_nine_columns_in_order():
@@ -189,67 +148,17 @@ def test_replay_board_has_nine_columns_in_order():
     )
 
 
-def test_replay_board_css_prevents_overflow_at_phone_width():
-    """AC1: the CSS constrains the board at phone width so it fits within 375px.
+def test_replay_board_stacks_at_phone_width(rendered):
+    """AC1: at 375x812 the board is a grid of one column, so its nine columns stack.
 
-    The bug: site.css had no rules for .replay-board/.replay-col/.replay-card,
-    so the nine columns rendered at their natural width (591px) in a 375px
-    viewport and the page scrolled sideways.
-
-    The fix: .replay-board is laid out as a grid, and a phone-width media query
-    constrains it to a single column so it reflows to fit the viewport.
+    The bug: site.css had no rules for .replay-board/.replay-col/.replay-card, so
+    the board wasn't laid out at all and the page scrolled sideways.
     """
-    css = page("/css/site.css")
+    replay = rendered("/replay.html", width=375, height=812)
+    board = replay.locator('[aria-label="Board"]')
 
-    # The board must have CSS rules at all (the bug: no rules existed).
-    assert ".replay-board" in css, (
-        "site.css has no rules for .replay-board: "
-        "the board columns will not be laid out and will overflow at phone width"
+    display, tracks = board.evaluate(
+        "el => [getComputedStyle(el).display, getComputedStyle(el).gridTemplateColumns]"
     )
-
-    # The board must be laid out as a grid (the design mock uses grid).
-    board_rules = re.findall(r"\.replay-board\s*\{([^}]*)\}", css)
-    assert board_rules, (
-        "site.css has no .replay-board rule block: the board columns will not be laid out"
-    )
-    # At least one .replay-board rule must set display: grid
-    has_display_grid = any("display: grid" in r or "display:grid" in r for r in board_rules)
-    assert has_display_grid, (
-        f".replay-board does not set display: grid in any rule; "
-        f"the columns will not be laid out as a grid. "
-        f"Rules found: {board_rules}"
-    )
-
-    # A phone-width media query (max-width >= 375px) must constrain the board
-    # to a single column so the nine columns stack and fit within 375px.
-    media_blocks = _media_block_contents_at_least_width(css, min_width=375)
-    assert media_blocks, (
-        "site.css has no @media (max-width: Npx) with N >= 375: "
-        "the board will not reflow at phone width"
-    )
-
-    constrained = False
-    for block in media_blocks:
-        board_rules_in_media = _rules_for_selector_in_block(block, ".replay-board")
-        for rule_body in board_rules_in_media:
-            gtc_match = re.search(r"grid-template-columns:\s*([^;]+)", rule_body)
-            if not gtc_match:
-                continue
-            value = gtc_match.group(1).strip().rstrip(";").strip()
-            # A single column: 1fr, 1, minmax(0,1fr), 100%, auto, etc.
-            # NOT repeat(N, ...) where N > 1.
-            repeat_match = re.match(r"repeat\(\s*(\d+)", value)
-            if repeat_match and int(repeat_match.group(1)) > 1:
-                continue
-            constrained = True
-            break
-        if constrained:
-            break
-
-    assert constrained, (
-        "site.css has no phone-width media query (max-width >= 375px) that "
-        "constrains .replay-board's grid-template-columns to a single column. "
-        "The nine board columns will overflow a 375px viewport. "
-        "(mqucifer/crew-presentation#224: the board rendered 591px wide "
-        "in a 375px viewport because no CSS rules laid it out.)"
-    )
+    assert display == "grid", f"the board's display is {display!r} at 375px, not a grid"
+    assert len(tracks.split()) == 1, f"the board has the columns {tracks!r} at 375px, not one"
