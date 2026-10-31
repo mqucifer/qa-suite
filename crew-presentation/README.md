@@ -81,6 +81,10 @@ site's main, and a red one comes back with its log.
 | `test_replay_board.py::test_replay_board_has_nine_columns_in_order` | The Board section contains exactly nine .replay-col children in DOM order (Needs Refinement through Blocked), each with a .replay-col__header showing the column name (mqucifer/crew-presentation#224 AC2) |
 | `test_replay_board.py::test_replay_board_stacks_at_phone_width` | In Chromium at 375x812, the board is a grid of one column, so its nine columns stack (mqucifer/crew-presentation#224 AC1) |
 | `test_story_journey.py::test_story_journey_fits_at_phone_width` | In Chromium at 375x812, story-journey.html shows its story links and its `document.documentElement.scrollWidth` is 375 or less: long card titles wrap (mqucifer/crew-presentation#227 AC1, WCAG 2.2 1.4.10 Reflow) |
+| `test_browser.py::test_story_page_journey_link_resolves` | A story page's 'A story's journey' link in nav[aria-label='Views'] has an href that, resolved from the stories/ subdirectory, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC1: the link was root-relative, resolving to stories/story-journey.html which doesn't exist) |
+| `test_browser.py::test_story_page_replay_link_resolves` | A story page's 'Replay' link in nav[aria-label='Views'] has an href that, resolved from the stories/ subdirectory, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC2: the link was root-relative, resolving to stories/replay.html which doesn't exist) |
+| `test_browser.py::test_story_journey_replay_link_resolves` | story-journey.html's 'Replay' link in nav[aria-label='Views'] has an href that, resolved from the build root, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC3) |
+| `test_cycle_time_stat.py::test_cycle_time_stat_matches_package_value` | The cycle-time stat's value element contains the em dash '—' when the package's cycle_time_minutes is null, the same mark the other stat values on that row show for their missing values, or the formatted hours-and-minutes value otherwise (mqucifer/crew-presentation#233) |
 
 ## Running it locally
 ```sh
