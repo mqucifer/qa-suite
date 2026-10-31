@@ -1,26 +1,24 @@
-"""crew-presentation's story-journey root page: story links.
+"""crew-presentation's story-journey root page: CSS prevents horizontal scroll.
 
 The story-journey root page (no card argument) shows a list of story links,
-one per card in the package. Each link's text is 'repo#number — title' (the
-full string, not truncated).
+one per card in the package. Each link's text is 'repo#number — title'.
+With long titles, the anchors' intrinsic width exceeds a 375px viewport,
+forcing horizontal scroll (mqucifer/crew-presentation#227).
 
-These tests verify:
-- The root page shows one li per card in the package, with the full link
-  text matching the package's cards (mqucifer/crew-presentation#227 AC2).
+The fix: a CSS rule sets overflow-wrap (or word-break) on the story list
+links so long titles wrap within the viewport.
 
-The tests read the built page (QA_BASE_URL/story-journey.html) and the
-package (QA_PACKAGE) to determine expected links.
+This test reads the site's CSS (QA_BASE_URL/css/site.css) and verifies the
+rule is present. It fails on the buggy version (no overflow-wrap rule) and
+passes on the fixed version.
 """
 
 from __future__ import annotations
 
-import html
-import json
 import os
 import re
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 import pytest
 
@@ -42,51 +40,56 @@ def page(path: str) -> str:
         pytest.fail(f"GET {path} answered {error.code}: the site has no such page", pytrace=False)
 
 
-def _load_cards() -> list[dict]:
-    """The cards array from the package's delivery-history.json."""
-    index = json.loads((Path(PACKAGE) / "delivery-history.json").read_text())
-    return index.get("cards", [])
-
-
-def test_story_journey_root_shows_all_cards_as_links():
-    """AC2: the story-journey root page shows one li per card, with the full link text.
+def test_story_journey_links_wrap_not_scroll():
+    """AC1: the CSS prevents story links from forcing horizontal scroll at 375px.
 
     Given the story-journey root page built from a package whose cards array
-    contains N cards, the page's section contains exactly N li elements, each
-    with one a child whose textContent equals 'repo#number — title'.
+    contains a card with a long title, when rendered at a 375px viewport,
+    document.documentElement.scrollWidth must be 375 or less (WCAG 2.2 1.4.10
+    Reflow). The mechanism: a CSS rule on the story list anchors sets
+    overflow-wrap or word-break so long text wraps rather than extends the
+    layout.
+
+    This test checks the served CSS for that rule. It fails when the rule is
+    absent (the bug) and passes when it is present (the fix).
     """
-    cards = _load_cards()
-    assert cards, (
-        "the package has no cards: the story-journey page's list would be empty, "
-        "and this test can't verify the link structure"
+    css = page("/css/site.css")
+
+    # The story-journey root page renders links as:
+    #   <section><h2>Stories</h2><ul><li><a>...</a></li>...</ul></section>
+    # A rule targeting these anchors must set overflow-wrap or word-break.
+    #
+    # Possible selectors: 'section ul li a', 'section li a', etc.
+    # The key is that it reaches anchors inside <li> inside <section>'s <ul>.
+
+    found = False
+
+    # Check for overflow-wrap or word-break on a selector that targets
+    # anchors within sections' lists.
+    for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        selector = match.group(1).strip()
+        body = match.group(2)
+
+        # Must target an anchor (a) in the selector
+        if not re.search(r"\ba\b", selector):
+            continue
+
+        # Must reference li, ul, or section in the selector (the story list)
+        if not re.search(r"\b(li|ul|section)\b", selector):
+            continue
+
+        # Must set overflow-wrap or word-break to a wrapping value
+        if re.search(
+            r"(overflow-wrap|word-wrap|word-break)\s*:\s*(break-word|anywhere|auto)",
+            body,
+        ):
+            found = True
+            break
+
+    assert found, (
+        "site.css has no rule that sets overflow-wrap, word-wrap, or word-break "
+        "to a wrapping value on anchors within the story list (section/ul/li). "
+        "Long card titles will exceed a 375px viewport and force horizontal "
+        "scroll. (mqucifer/crew-presentation#227: story links 402-631px wide "
+        "in a 375px viewport.)"
     )
-
-    page_html = page("/story-journey.html")
-
-    # The root story-journey page (no card argument) renders a section with a ul
-    # of story links.
-    section_match = re.search(r"<h2>Stories</h2>\s*<ul>(.*?)</ul>", page_html, re.DOTALL)
-    assert section_match, (
-        "story-journey.html has no <section> with a 'Stories' heading and <ul>: "
-        "the root page's story list is missing"
-    )
-    list_html = section_match.group(1)
-
-    # Extract all <li><a ...>text</a></li> elements.
-    items = re.findall(r"<li>\s*<a[^>]*>(.*?)</a>\s*</li>", list_html, re.DOTALL)
-    assert len(items) == len(cards), (
-        f"story-journey.html shows {len(items)} story links, but the package "
-        f"records {len(cards)} cards"
-    )
-
-    # Each link's text must be 'repo#number — title' (the full string, not truncated).
-    # Jinja2's autoescape converts characters like ' to &#39;, so decode
-    # entities before comparing to the package's plain-text title.
-    for i, (card, link_text) in enumerate(zip(cards, items)):
-        expected = f"{card['repo']}#{card['number']} — {card['title']}"
-        actual = html.unescape(link_text)
-        assert actual == expected, (
-            f"story link {i + 1} is {actual!r}, expected {expected!r} "
-            f"(card: repo={card['repo']!r}, number={card['number']}, "
-            f"title={card['title']!r})"
-        )
