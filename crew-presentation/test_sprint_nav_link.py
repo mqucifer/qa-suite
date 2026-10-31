@@ -53,11 +53,15 @@ def _sprint_nav_href(html: str) -> str:
     return link_match.group(1)
 
 
-def _url_exists(url: str) -> bool:
-    """Check whether a URL returns HTTP 200."""
+def _url_is_file(url: str) -> bool:
+    """Check whether a URL returns HTTP 200 for a file (not a directory listing)."""
     try:
         with urllib.request.urlopen(url, timeout=10) as response:
-            return response.status == 200
+            if response.status != 200:
+                return False
+            body = response.read(4096).decode(errors="replace")
+            # python http.server returns a directory listing for directories
+            return "Directory listing for" not in body
     except (urllib.error.HTTPError, urllib.error.URLError):
         return False
 
@@ -92,9 +96,9 @@ def test_sprint_nav_link_on_replay_html():
     assert href, "the Sprint nav link on replay.html has an empty href"
 
     resolved = urljoin(BASE + "/replay.html", href)
-    assert _url_exists(resolved), (
+    assert _url_is_file(resolved), (
         f"replay.html's Sprint nav link points to {href!r}, "
-        f"which resolves to {resolved} but does not exist in the build directory"
+        f"which resolves to {resolved} but does not name a file in the build directory"
     )
 
 
@@ -119,7 +123,7 @@ def test_sprint_nav_link_on_story_pages():
         assert href, f"{path}: the Sprint nav link has an empty href"
 
         resolved = urljoin(BASE + path, href)
-        assert _url_exists(resolved), (
+        assert _url_is_file(resolved), (
             f"{path}: the Sprint nav link points to {href!r}, "
-            f"which resolves to {resolved} but does not exist in the build directory"
+            f"which resolves to {resolved} but does not name a file in the build directory"
         )
