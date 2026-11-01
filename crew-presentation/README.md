@@ -63,6 +63,7 @@ site's main, and a red one comes back with its log.
 |---|---|
 | `test_reads_crew.py::test_the_site_accepts_the_package` | build.py accepts the package: its schema's major is one the site displays (mqucifer/crew#905's case), and it validates |
 | `test_reads_crew.py::test_a_sprints_page_shows_its_throughput` | Each sprint's page shows sprint-metrics' `throughput` from the package as "stories delivered" |
+| `test_sprint_overview.py::test_a_story_is_listed_under_one_sprint_only` | No story is on more than one sprint's 'The Architect's split, story by story' list, and at least one list has a story, read from the pages: a sprint's list holds only that sprint's stories, which the site's own tests don't catch |
 | `test_failure_causes.py::test_failure_causes_2_0_class_shown_not_placeholder` | A 2.0.0 entry carrying a class shows the class as its label in the cause section, not the 'Cause not recorded' placeholder, with its count preserved (mqucifer/crew-presentation#216 AC1) |
 | `test_failure_causes.py::test_failure_causes_empty_or_absent_shows_no_failures` | An empty or absent top_failure_causes shows 'No failures recorded' and no cause-rows; the build does not fail (mqucifer/crew-presentation#216 AC3) |
 | `test_delivery_history_major_2.py::test_a_major_2_package_is_accepted` | build.py accepts a package on schema major 2: the check does not refuse it as an unsupported major (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
