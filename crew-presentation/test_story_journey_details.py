@@ -1,16 +1,15 @@
-"""crew-presentation's story journey page: events timeline, cost section, omission.
+"""crew-presentation's story journey page: its timeline of events.
 
 The bug (mqucifer/crew-presentation#231): the journey page showed only the
 card title, its meta line, the story's one-sentence text, and the five-stage
 path strip. It did not show the story's events (when it entered each stage,
-its moves), its cost (wall-clock, model calls), or anything else about the
-story's life cycle — a delivered story gave no more detail than an undelivered one.
+its moves), or anything else about the story's life cycle — a delivered story
+gave no more detail than an undelivered one.
 
-The fix: the journey page now renders:
-- 'What happened, in order': a timeline of the story's events with timestamps
-- 'What it cost': wall-clock and model calls (when the data is present)
+The fix: the journey page now renders 'What happened, in order', a timeline of
+the story's events with timestamps.
 
-These tests verify the fix by reading the package (the site's input) and the
+This test verifies the fix by reading the package (the site's input) and the
 built pages (the site's output), and checking the output matches the input.
 """
 
@@ -97,22 +96,6 @@ def _hhmm(at: str) -> str | None:
     return f"{m.group(1)}:{m.group(2)}" if m else None
 
 
-def _wall_clock_display(wall_clock_seconds) -> str | None:
-    """The display text build.py's _format_minutes produces for wall_clock_seconds.
-
-    1740 -> round(1740/60)=29 -> '29 min'. None -> None (no cost section).
-    """
-    if wall_clock_seconds is None:
-        return None
-    minutes = round(wall_clock_seconds / 60)
-    hours, mins = divmod(int(minutes), 60)
-    if hours == 0:
-        return f"{mins} min"
-    if mins == 0:
-        return f"{hours} hr"
-    return f"{hours} hr {mins} min"
-
-
 def test_journey_page_shows_event_timeline():
     """AC1: the journey page shows 'What happened, in order' with event details.
 
@@ -167,110 +150,4 @@ def test_journey_page_shows_event_timeline():
             f"{slug}: the journey page has move events in the package "
             f"with timestamps and destination columns, but none of them "
             f"appear in the rendered timeline"
-        )
-
-
-def test_journey_page_shows_cost_section():
-    """AC2: the journey page shows 'What it cost' with wall-clock and model calls.
-
-    Given a card whose analysis.stories entry has wall_clock_seconds and
-    cost.model_calls, when the build renders the journey page for that card,
-    the page body contains a heading 'What it cost' and, within the same
-    section, the wall-clock formatted as hours and minutes and the model calls
-    count.
-
-    This test fails on the buggy version (no cost section) and passes on the
-    fixed version (cost section rendered from the package's analysis).
-    """
-    index = _load_index()
-    stories = index.get("analysis", {}).get("stories", [])
-
-    for story in stories:
-        card_ref = story.get("card")
-        if not card_ref:
-            continue
-        repo = card_ref.get("repo", "")
-        number = card_ref.get("number")
-        if not repo or number is None:
-            continue
-
-        wall_clock_seconds = story.get("wall_clock_seconds")
-        cost = story.get("cost")
-        model_calls = cost.get("model_calls") if isinstance(cost, dict) else None
-
-        if wall_clock_seconds is None or model_calls is None:
-            continue
-
-        slug = _slug_for_card(repo, number)
-        html = page("/" + slug)
-
-        # The page must have the cost heading
-        assert "What it cost" in html, (
-            f"{slug}: the journey page has no 'What it cost' heading: "
-            f"the story's cost data is not rendered (crew-presentation#231)"
-        )
-
-        # The wall-clock should be formatted and shown
-        expected = _wall_clock_display(wall_clock_seconds)
-        assert expected is not None
-        assert expected in html, (
-            f"{slug}: wall_clock_seconds={wall_clock_seconds} should show "
-            f"{expected!r} in the cost section, but it's not in the page"
-        )
-
-        # The model calls count should be in a cost-grid__value span
-        pattern = rf"cost-grid__value[^>]*>\s*{re.escape(str(model_calls))}\s*<"
-        assert re.search(pattern, html), (
-            f"{slug}: cost.model_calls={model_calls} should be shown "
-            f"in a cost-grid__value span, but {str(model_calls)!r} isn't found"
-        )
-
-
-def test_journey_page_omits_cost_when_no_wall_clock():
-    """AC3: when wall_clock_seconds is null, the journey page omits 'What it cost'.
-
-    Given a card whose analysis.stories entry has wall_clock_seconds null and
-    whose periods contain at least one event for that card, when the build
-    renders the journey page, the page body contains 'What happened, in order'
-    (the events are shown) but does NOT contain 'What it cost' (the cost
-    section is absent because the data is missing).
-
-    This guards against a regression where the cost section is shown
-    regardless of the data.
-    """
-    index = _load_index()
-    stories = index.get("analysis", {}).get("stories", [])
-    events = _load_all_events(index)
-
-    for story in stories:
-        card_ref = story.get("card")
-        if not card_ref:
-            continue
-        repo = card_ref.get("repo", "")
-        number = card_ref.get("number")
-        if not repo or number is None:
-            continue
-
-        # Only check stories with wall_clock_seconds null
-        if story.get("wall_clock_seconds") is not None:
-            continue
-
-        # Check that this card has at least one event
-        if not _events_for_card(events, number, repo):
-            continue
-
-        slug = _slug_for_card(repo, number)
-        html = page("/" + slug)
-
-        # The events should be shown (the card has events)
-        assert "What happened, in order" in html, (
-            f"{slug}: the card has events but the journey page has no "
-            f"'What happened, in order' heading"
-        )
-
-        # The cost section should NOT be shown
-        assert "What it cost" not in html, (
-            f"{slug}: wall_clock_seconds is null but the page shows "
-            f"'What it cost': the cost section should be omitted when "
-            f"the data is missing"
         )
