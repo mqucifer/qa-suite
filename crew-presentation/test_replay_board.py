@@ -1,8 +1,8 @@
 """crew-presentation's replay board: structure and phone-width layout.
 
-The replay page shows a board of columns (Needs Refinement, Ready, Sprint
-Backlog, In Progress, Reviewing, QAing, Merging, Done, Blocked). Each column
-is a .replay-col element with a .replay-col__header.
+The replay page shows a board of columns (Inbox (Goals), Needs Refinement,
+Ready, Sprint Backlog, In Progress, Reviewing, QAing, Merging, Done, Blocked).
+Each column is a .replay-col element with a .replay-col__header.
 
 These tests verify that:
 - The Board section contains the expected columns in order, each with its
@@ -118,7 +118,7 @@ def _board_col_count(html: str) -> int:
     return len(re.findall(r'<div class="replay-col">', board_html))
 
 
-def test_replay_board_has_nine_columns_in_order():
+def test_replay_board_has_expected_columns_in_order():
     """AC2: the Board section has the expected columns in DOM order.
 
     Given a built site whose replay.html contains a Board section with
@@ -133,23 +133,23 @@ def test_replay_board_has_nine_columns_in_order():
     assert sprint_name, "the last sprint has no name"
 
     expected = _expected_columns(index, sprint_name)
-    assert len(expected) == 9, (
-        f"the package's last sprint ({sprint_name!r}) produces "
-        f"{len(expected)} board columns ({expected}), but the test expects 9"
-    )
+    assert expected, f"the package's last sprint ({sprint_name!r}) produced no board columns"
 
     html = page("/replay.html")
     headers = _board_section_headers(html)
     col_count = _board_col_count(html)
 
-    assert col_count == 9, f"the Board section has {col_count} .replay-col elements, expected 9"
+    assert col_count == len(expected), (
+        f"the Board section has {col_count} .replay-col elements, "
+        f"expected {len(expected)} ({expected})"
+    )
     assert headers == expected, (
         f"the Board section's column headers are {headers}, expected {expected} (in that DOM order)"
     )
 
 
 def test_replay_board_stacks_at_phone_width(rendered):
-    """AC1: at 375x812 the board is a grid of one column, so its nine columns stack.
+    """AC1: at 375x812 the board is a grid of one column, so its columns stack.
 
     The bug: site.css had no rules for .replay-board/.replay-col/.replay-card, so
     the board wasn't laid out at all and the page scrolled sideways.
