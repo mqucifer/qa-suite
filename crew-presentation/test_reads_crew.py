@@ -44,14 +44,18 @@ def sprints_with_answers() -> list[tuple[str, dict]]:
 
 
 def test_the_site_accepts_the_package():
-    # build.py refuses a package on a schema major it can't display (mqucifer/crew#905's case),
-    # or one that doesn't validate against the schemas it carries.
+    """build.py accepts the package: its schema's major is one the site displays
+    (mqucifer/crew#905's case), and it validates.
+    """
     status = (Path(STATE) / "build.status").read_text().strip()
     log = (Path(STATE) / "build.log").read_text()
     assert status == "0", f"crew-presentation's build.py refused the package:\n{log[:1500]}"
 
 
 def test_a_sprints_page_shows_its_throughput():
+    """Each sprint's page shows sprint-metrics' throughput from the package
+    as 'stories delivered'.
+    """
     sprints = sprints_with_answers()
     assert sprints, "the package has no sprint with sprint-metrics' answers"
     for name, answer in sprints:
