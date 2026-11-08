@@ -44,17 +44,27 @@ def _expected_cycle_time(minutes) -> str:
     """The display text build.py's _format_minutes produces for a cycle_time_minutes value.
 
     A missing value (JSON null) renders '—', the same mark _stat_value uses
-    for other missing stats. A present value renders hours and minutes:
-    zero units are omitted, so 60 is '1 hr' and 102 is '1 hr 42 min'.
+    for other missing stats. A present value renders in the canonical
+    vocabulary (mqucifer/crew-presentation#340): below a day, hours and
+    minutes with 'h' and 'min'; at a day and up, days and hours with 'd'
+    and 'h', minutes dropped. Zero units are omitted, so 60 is '1 h',
+    92 is '1 h 32 min', and 1500 is '1 d 1 h'.
     """
     if minutes is None:
         return "\u2014"
-    hours, mins = divmod(int(minutes), 60)
+    total_minutes = int(minutes)
+    if total_minutes < 60:
+        return f"{total_minutes} min"
+    if total_minutes < 1440:
+        hours, mins = divmod(total_minutes, 60)
+        if mins == 0:
+            return f"{hours} h"
+        return f"{hours} h {mins} min"
+    days, remainder = divmod(total_minutes, 1440)
+    hours = remainder // 60
     if hours == 0:
-        return f"{mins} min"
-    if mins == 0:
-        return f"{hours} hr"
-    return f"{hours} hr {mins} min"
+        return f"{days} d"
+    return f"{days} d {hours} h"
 
 
 def test_cycle_time_stat_matches_package_value():
