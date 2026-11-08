@@ -1,4 +1,4 @@
-"""sprint-metrics through its HTTP API: a card finished in a sprint is counted there.
+"""Throughput and cycle time read through the HTTP API.
 
 The surface is the service's API as docs/service.md in sprint-metrics describes
 it, reached at QA_BASE_URL, which start.sh sets.
