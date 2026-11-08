@@ -59,32 +59,22 @@ selectors in, and its `tests/test_browser.py` shows what the site's own Playwrig
 tests measure. Then open the pull request: `suite.yml` runs the test against the
 site's main, and a red one comes back with its log.
 
-| Test | What it proves |
+## Test files
+
+| File | Topic |
 |---|---|
-| `test_reads_crew.py::test_the_site_accepts_the_package` | build.py accepts the package: its schema's major is one the site displays (mqucifer/crew#905's case), and it validates |
-| `test_reads_crew.py::test_a_sprints_page_shows_its_throughput` | Each sprint's page shows sprint-metrics' `throughput` from the package as "stories delivered" |
-| `test_sprint_overview.py::test_a_story_is_listed_under_one_sprint_only` | No story is on more than one sprint's 'The Architect's split, story by story' list, and at least one list has a story, read from the pages: a sprint's list holds only that sprint's stories, which the site's own tests don't catch |
-| `test_failure_causes.py::test_failure_causes_2_0_class_shown_not_placeholder` | A 2.0.0 entry carrying a class shows the class as its label in the cause section, not the 'Cause not recorded' placeholder, with its count preserved (mqucifer/crew-presentation#216 AC1) |
-| `test_failure_causes.py::test_failure_causes_empty_or_absent_shows_no_failures` | An empty or absent top_failure_causes shows 'No failures recorded' and no cause-rows; the build does not fail (mqucifer/crew-presentation#216 AC3) |
-| `test_delivery_history_major_2.py::test_a_major_2_package_is_accepted` | build.py accepts a package on schema major 2: the check does not refuse it as an unsupported major (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
-| `test_delivery_history_major_2.py::test_a_major_2_package_builds_the_expected_pages` | A well-formed major-2 package builds and writes one sprint-overview page per sprint, one story page per card, and the replay page (mqucifer/crew-presentation#215; vacuous while the package is on major 1) |
-| `test_replay_board_cards.py::test_replay_board_cards_render_links_not_markdown` | No board card element on the replay page contains the literal markdown string '[repo#number](url)': the reference is rendered as a hyperlink, not raw syntax (mqucifer/crew-presentation#226 AC1) |
-| `test_replay_board_cards.py::test_replay_board_cards_have_correct_hyperlink` | Each board card on the replay page contains an <a> element whose href equals the card's issue URL and whose visible text equals 'repo#number' (mqucifer/crew-presentation#226 AC2) |
-| `test_sprint_nav_link.py::test_sprint_nav_link_on_replay_html` | replay.html's Sprint link in nav[aria-label='Views'] has a non-empty href whose value names a file that exists in the build directory (mqucifer/crew-presentation#229: the href was empty, so clicking it only reloaded the same page) |
-| `test_sprint_nav_link.py::test_sprint_nav_link_on_story_pages` | Every story page under stories/ has a Sprint link in nav[aria-label='Views'] whose href, resolved relative to the story page's directory, names a file that exists in the build directory (mqucifer/crew-presentation#229) |
-| `test_escalation_removed.py::test_sprint_overview_has_no_escalations_stat` | No sprint page's stats section has an 'escalations' stat: the site no longer reports sprint-metrics' escalation count or rate (mqucifer/crew-presentation#217 AC1) |
-| `test_escalation_removed.py::test_changed_trend_shows_no_escalation_entry` | No sprint page's 'What changed' card shows an escalation entry, and at least one page shows an entry of another measure, read from the pages alone (mqucifer/crew-presentation#217 AC1+AC2) |
-| `test_escalation_removed.py::test_replay_page_carries_escalated_events` | The build does not fail and the replay page's JSON data still carries the crew's own escalated events (kind 'escalated'): only sprint-metrics' escalation_count / escalation_rate_percent are dropped (mqucifer/crew-presentation#217 AC3) |
-| `test_replay_board.py::test_replay_board_has_expected_columns_in_order` | The Board section contains the columns the package's last sprint produces, in the design system's tone-table order, each with a .replay-col__header showing the column name (mqucifer/crew-presentation#224 AC2) |
-| `test_replay_board.py::test_replay_board_stacks_at_phone_width` | In Chromium at 375x812, the board is a grid of one column, so its columns stack (mqucifer/crew-presentation#224 AC1) |
-| `test_story_journey.py::test_story_journey_fits_at_phone_width` | In Chromium at 375x812, story-journey.html shows its story links and its `document.documentElement.scrollWidth` is 375 or less: long card titles wrap (mqucifer/crew-presentation#227 AC1, WCAG 2.2 1.4.10 Reflow) |
-| `test_browser.py::test_story_page_journey_link_resolves` | A story page's 'A story's journey' link in nav[aria-label='Views'] has an href that, resolved from the stories/ subdirectory, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC1: the link was root-relative, resolving to stories/story-journey.html which doesn't exist) |
-| `test_browser.py::test_story_page_replay_link_resolves` | A story page's 'Replay' link in nav[aria-label='Views'] has an href that, resolved from the stories/ subdirectory, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC2: the link was root-relative, resolving to stories/replay.html which doesn't exist) |
-| `test_browser.py::test_story_journey_replay_link_resolves` | story-journey.html's 'Replay' link in nav[aria-label='Views'] has an href that, resolved from the build root, names a file that exists in the build directory (mqucifer/crew-presentation#230 AC3) |
-| `test_cycle_time_stat.py::test_cycle_time_stat_matches_package_value` | The cycle-time stat's value element contains the em dash '—' when the package's cycle_time_minutes is null, the same mark the other stat values on that row show for their missing values, or the formatted hours-and-minutes value otherwise (mqucifer/crew-presentation#233) |
-| `test_story_journey_details.py::test_journey_page_shows_event_timeline` | A story page for a card that has move events in the package's periods contains the heading 'What happened, in order' and at least one move event's timestamp (HH:MM) and destination column (mqucifer/crew-presentation#231 AC1: the buggy version showed no events at all) |
-| `test_browser.py::test_replay_page_scrollwidth_at_phone_width_with_real_titles` | replay.html, built from the real package, has documentElement.scrollWidth of 375 or less at a 375px viewport, whatever titles the package holds (mqucifer/crew-presentation#246 AC1: the board column's auto minimum width allowed a long word to push the page to 559px) |
-| `test_browser.py::test_replay_cards_show_their_full_titles` | Every .replay-card on the board renders its card's full title from the package, and the card's content fits its box at 375px: the title wraps rather than being clipped or ellipsized (mqucifer/crew-presentation#246 AC2) |
+| `test_browser.py` | View nav links resolve to real files, and the replay page fits a phone with real card titles (mqucifer/crew-presentation#230, #246) |
+| `test_cycle_time_stat.py` | The cycle-time stat renders a missing value as an em dash (mqucifer/crew-presentation#233) |
+| `test_delivery_history_major_2.py` | The site accepts and builds a package on schema major 2 (mqucifer/crew-presentation#215) |
+| `test_escalation_removed.py` | The site no longer shows sprint-metrics' escalation count or rate (mqucifer/crew-presentation#217) |
+| `test_failure_causes.py` | The failure-causes section reads top_failure_causes correctly (mqucifer/crew-presentation#216) |
+| `test_reads_crew.py` | The site accepts the package, and a sprint's page shows sprint-metrics' answers |
+| `test_replay_board.py` | The replay board's structure and phone-width layout (mqucifer/crew-presentation#224) |
+| `test_replay_board_cards.py` | Board cards render their references as hyperlinks, not raw markdown (mqucifer/crew-presentation#226) |
+| `test_sprint_nav_link.py` | The Sprint nav link on non-sprint pages points to a real sprint page (mqucifer/crew-presentation#229) |
+| `test_sprint_overview.py` | A sprint's story list holds only that sprint's stories |
+| `test_story_journey.py` | The story-journey root page fits a phone (mqucifer/crew-presentation#227) |
+| `test_story_journey_details.py` | The story journey page shows its event timeline (mqucifer/crew-presentation#231) |
 
 ## Running it locally
 ```sh
