@@ -15,9 +15,11 @@ mqucifer/sprint-metrics#788 retired the CLI), and waits for GET /health.
 runs them against sprint-metrics' main (`suite.yml`) before they merge. When sprint-metrics
 changes how its CI starts the image, `start.sh` follows.
 
-| Test | What it proves |
+## Test files
+
+| File | Topic |
 |---|---|
-| `test_api.py` | A card started and finished in a sprint is counted there by GET /range: throughput 1, cycle time 2 days |
+| `test_api.py` | Throughput and cycle time read through the HTTP API |
 
 ## Running it locally
 ```sh

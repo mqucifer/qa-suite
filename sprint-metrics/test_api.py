@@ -1,4 +1,4 @@
-"""sprint-metrics through its HTTP API: a card finished in a sprint is counted there.
+"""Throughput and cycle time read through the HTTP API.
 
 The surface is the service's API as docs/service.md in sprint-metrics describes
 it, reached at QA_BASE_URL, which start.sh sets.
@@ -44,6 +44,7 @@ def event(card: str, kind: str, at: str, sprint: str) -> dict:
 
 
 def test_a_finished_card_counts_in_its_sprint():
+    """A card started and finished in a sprint is counted there by GET /range: throughput 1, cycle time 2 days."""
     # A sprint of its own, so a rerun against the same database counts only this one.
     sprint = f"QA-{uuid.uuid4().hex[:8]}"
     card = f"{sprint}-card"
