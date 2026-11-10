@@ -72,10 +72,10 @@ def test_cycle_time_stat_matches_package_value():
 
     For each sprint with sprint-metrics' answers, the cycle-time stat's value
     element (the <span class="stat__value num"> inside the stat labelled
-    "Start to delivered", with "cycle time" as its sub-line) contains the
-    em dash '—' when cycle_time_minutes is null, the same mark the other
-    stat value elements on that .stats row show for their missing values,
-    or the formatted hours-and-minutes value otherwise.
+    "cycle time") contains the em dash '—' when cycle_time_minutes is null,
+    the same mark the other stat value elements on that .stats row show
+    for their missing values, or the formatted hours-and-minutes value
+    otherwise.
     """
     index = json.loads((Path(PACKAGE) / "delivery-history.json").read_text())
     answers = index.get("sprint_metrics", {}).get("answers", {})
@@ -90,10 +90,10 @@ def test_cycle_time_stat_matches_package_value():
         slug = name.lower().replace(" ", "-") + ".html"
         html_content = page("/" + slug)
         match = re.search(
-            r'<span class="stat__label">Start to delivered</span>\s*<span class="stat__value[^"]*">\s*([^<]*?)\s*</span>',
+            r'<span class="stat__value[^"]*">\s*([^<]*?)\s*</span>\s*<span class="stat__label">cycle time</span>',
             html_content,
         )
-        assert match, f"{slug} shows no 'Start to delivered' stat"
+        assert match, f"{slug} shows no 'cycle time' stat"
         shown = html.unescape(match.group(1)).strip()
         expected = _expected_cycle_time(cycle_time)
         assert shown == expected, (
