@@ -84,6 +84,21 @@ jobs:
           echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} merged with main, at ${merge_sha:0:7}." \
             >> "$GITHUB_STEP_SUMMARY"
 
+  # The suite's own structural tests: they read suite.yml and verify its dispute
+  # handling is correct (mqucifer/crew#945). They need no project build—just the
+  # workflow file and pytest—so they run on every pull request, independent of
+  # which project folders it changes.
+  meta:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --quiet
+      - run: uv run pytest test_suite_yml.py
+
   qa:
     needs: changed
     if: needs.changed.outputs.projects != '[]'
