@@ -54,22 +54,22 @@ def test_the_site_accepts_the_package():
 
 def test_a_sprints_page_shows_its_throughput():
     """Each sprint's page shows sprint-metrics' throughput from the package
-    as 'stories delivered'.
+    as 'Stories delivered'.
     """
     sprints = sprints_with_answers()
     assert sprints, "the package has no sprint with sprint-metrics' answers"
     for name, answer in sprints:
         assert "throughput" in answer, (
             f"the package's sprint_metrics.answers[{name!r}] has no throughput, "
-            f"which the site shows as 'stories delivered': {sorted(answer)}"
+            f"which the site shows as 'Stories delivered': {sorted(answer)}"
         )
         slug = name.lower().replace(" ", "-") + ".html"
         shown = re.search(
-            r'stat__value[^>]*>\s*([^<]*?)\s*</span>\s*<span class="stat__label">stories delivered',
+            r'<span class="stat__label">Stories delivered</span>\s*<span class="stat__value[^"]*">\s*([^<]*?)\s*</span>',
             page("/" + slug),
         )
-        assert shown, f"{slug} shows no 'stories delivered'"
-        expected = "—" if answer["throughput"] is None else str(answer["throughput"])
+        assert shown, f"{slug} shows no 'Stories delivered' stat"
+        expected = "\u2014" if answer["throughput"] is None else str(answer["throughput"])
         assert html.unescape(shown.group(1)) == expected, (
             f"{slug} shows {shown.group(1)!r} stories delivered; "
             f"the package says {answer['throughput']!r}"
