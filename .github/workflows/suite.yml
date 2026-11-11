@@ -74,7 +74,7 @@ jobs:
           # same tree the project's own checks judge. GitHub keeps this ref while
           # the pull request is open and mergeable; if it has unresolved conflicts
           # with main, the ref does not exist.
-          if ! merge_sha=$(gh api "repos/mqucifer/${repo}/commits/refs/pulls/${pull}/merge" \
+          if ! merge_sha=$(gh api "repos/mqucifer/${repo}/commits/refs/pull/${pull}/merge" \
             --jq '.sha' 2>/dev/null); then
             echo "::error::mqucifer/${repo}#${pull} can't merge with main (its refs/pull/${pull}/merge ref does not exist), so the build can't be started"
             exit 1
