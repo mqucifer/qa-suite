@@ -40,6 +40,18 @@ def test_dispute_merge_commit_reachable_by_qa_job():
     assert "refs/qa-dispute" in step
 
 
+def test_dispute_push_uses_target_repo_token():
+    """The push to the target repo uses a token from a secret with write access
+    to the target repositories, not the workflow's own token (which is scoped
+    to mqucifer/qa-suite and cannot write to the target)."""
+    step = _disputed_step()
+    # The step must not use GH_TOKEN or GITHUB_TOKEN in any URL.
+    assert "${GH_TOKEN}" not in step
+    assert "${GITHUB_TOKEN}" not in step
+    # The step uses a token from a secret.
+    assert "secrets." in step
+
+
 def test_dispute_summary_names_head_and_main():
     """Criterion 2: the step summary names both the PR head commit and the main
     commit it was merged with, so a reader sees both identifiers."""
