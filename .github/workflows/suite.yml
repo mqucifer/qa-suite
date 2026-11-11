@@ -55,21 +55,11 @@ jobs:
           echo "projects=$projects" >> "$GITHUB_OUTPUT"
           echo "Project folders changed: $projects" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Mint a token for the target repositories
-        id: token
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/create-github-app-token@v3
-        with:
-          client-id: Iv23lirf0uh3m9vl1vjm
-          private-key: ${{ secrets.BOARD_APP_PRIVATE_KEY }}
-          owner: mqucifer
-
       - name: Find the pull request a dispute's test runs against
         id: disputed
         if: github.event.pull_request.head.repo.full_name == github.repository
         env:
           BODY: ${{ github.event.pull_request.body }}
-          TOKEN: ${{ steps.token.outputs.token }}
         run: |
           set -euo pipefail
           found=$(printf '%s' "$BODY" \
@@ -83,10 +73,9 @@ jobs:
           head_sha=$(printf '%s' "$found" | sed -E 's/.* head=([0-9a-f]{40}) .*/\1/')
           # Merge the disputed pull request's head with the project's current main
           # in the workflow itself, so the build is against main as of the run,
-          # not a stale GitHub merge ref. The App token reaches the target
-          # project, unlike this repository's built-in token.
+          # not a stale GitHub merge ref.
           workdir=$(mktemp -d)
-          git clone --quiet "https://x-access-token:${TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
+          git clone --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
           git -C "$workdir" fetch --quiet origin "$head_sha"
           git -C "$workdir" checkout --quiet "$head_sha"
           git -C "$workdir" fetch --quiet origin main
@@ -99,7 +88,7 @@ jobs:
           # Push the merge commit to a ref on the project's repository so the
           # qa job's checkout can fetch it across jobs.
           git -C "$workdir" push --quiet \
-            "https://x-access-token:${TOKEN}@github.com/mqucifer/${repo}.git" \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" \
             "HEAD:refs/qa-dispute/${pull}"
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
           echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
