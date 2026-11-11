@@ -66,6 +66,15 @@ def test_dispute_conflict_fails_with_cant_merge():
     assert "exit 1" in step
 
 
+def test_dispute_uses_app_token_not_github_token():
+    """The clone and push to the target repo use the minted App token, not
+    GITHUB_TOKEN (which is scoped to qa-suite and can't write to other repos)."""
+    step = _disputed_step()
+    assert "GITHUB_TOKEN" not in step
+    # The disputed step references the token step's output.
+    assert "steps.token.outputs.token" in _text()
+
+
 def test_no_dispute_builds_default_branch():
     """A run with no dispute marker builds the project's default branch,
     unchanged from current behaviour. When the marker is absent, the
