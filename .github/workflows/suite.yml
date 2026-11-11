@@ -60,7 +60,6 @@ jobs:
         if: github.event.pull_request.head.repo.full_name == github.repository
         env:
           BODY: ${{ github.event.pull_request.body }}
-          TARGET_TOKEN: ${{ secrets.QA_TARGET_TOKEN }}
         run: |
           set -euo pipefail
           found=$(printf '%s' "$BODY" \
@@ -76,7 +75,7 @@ jobs:
           # in the workflow itself, so the build is against main as of the run,
           # not a stale GitHub merge ref.
           workdir=$(mktemp -d)
-          git clone --quiet "https://x-access-token:${TARGET_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
+          git clone --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
           git -C "$workdir" fetch --quiet origin "$head_sha"
           git -C "$workdir" checkout --quiet "$head_sha"
           git -C "$workdir" fetch --quiet origin main
@@ -89,7 +88,7 @@ jobs:
           # Push the merge commit to a ref on the project's repository so the
           # qa job's checkout can fetch it across jobs.
           git -C "$workdir" push --quiet \
-            "https://x-access-token:${TARGET_TOKEN}@github.com/mqucifer/${repo}.git" \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" \
             "HEAD:refs/qa-dispute/${pull}"
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
           echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
