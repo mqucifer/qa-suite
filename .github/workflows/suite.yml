@@ -24,7 +24,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   changed:
@@ -62,6 +62,7 @@ jobs:
           BODY: ${{ github.event.pull_request.body }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           found=$(printf '%s' "$BODY" \
             | grep -oE '<!-- crew:qa-dispute repo=[A-Za-z0-9._-]+ story=[0-9]+ pull=[0-9]+ head=[0-9a-f]{40} -->' \
             | tail -n 1 || true)
@@ -85,6 +86,11 @@ jobs:
             exit 1
           fi
           merge_sha=$(git -C "$workdir" rev-parse HEAD)
+          # Push the merge commit to a ref on the project's repository so the
+          # qa job's checkout can fetch it across jobs.
+          git -C "$workdir" push --quiet \
+            "https://x-access-token:${GH_TOKEN}@github.com/mqucifer/${repo}.git" \
+            "HEAD:refs/qa-dispute/${pull}"
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
           echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
           echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}." >> "$GITHUB_STEP_SUMMARY"

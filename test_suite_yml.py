@@ -29,6 +29,17 @@ def test_dispute_merges_head_with_main_not_merge_ref():
     assert 'echo "head=$merge_sha"' in step
 
 
+def test_dispute_merge_commit_reachable_by_qa_job():
+    """The merge commit must be pushed to a ref on the project's repository,
+    so the qa job's checkout can fetch it (a local commit is unreachable
+    across jobs)."""
+    step = _disputed_step()
+    # The step pushes the merge commit to a ref on the target repo.
+    assert "git push" in step
+    # The ref names the dispute, so it's unique per pull request.
+    assert "refs/qa-dispute" in step
+
+
 def test_dispute_summary_names_head_and_main():
     """Criterion 2: the step summary names both the PR head commit and the main
     commit it was merged with, so a reader sees both identifiers."""
