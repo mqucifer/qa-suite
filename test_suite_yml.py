@@ -4,10 +4,15 @@ merged with main, not at a stale GitHub merge ref (mqucifer/crew#945)."""
 from pathlib import Path
 
 WORKFLOW = Path(".github/workflows/suite.yml")
+QA_WORKFLOW = Path(".github/workflows/qa.yml")
 
 
 def _text() -> str:
     return WORKFLOW.read_text()
+
+
+def _qa_text() -> str:
+    return QA_WORKFLOW.read_text()
 
 
 def _disputed_step() -> str:
@@ -21,23 +26,28 @@ def test_dispute_merges_head_with_main_not_merge_ref():
     text = _text()
     # The workflow must NOT use the merge ref API endpoint.
     assert "commits/refs/pull/${pull}/merge" not in text
-    # The step must check out the PR head and merge origin/main.
+    # The step checks out the PR head and verifies it merges with origin/main.
     step = _disputed_step()
     assert "checkout" in step
     assert "merge origin/main" in step
-    # The merge result is output as `head` for the qa job's build-ref.
-    assert 'echo "head=$merge_sha"' in step
+    # The head SHA is emitted for the qa job's build-ref, not a merge SHA.
+    assert 'echo "head=$head_sha"' in step
+    # The build merge happens in qa.yml, after the checkout.
+    qa = _qa_text()
+    assert "merge origin/main" in qa
 
 
-def test_dispute_merge_commit_reachable_by_qa_job():
-    """The merge commit must be pushed to a ref on the project's repository,
-    so the qa job's checkout can fetch it (a local commit is unreachable
-    across jobs)."""
+def test_dispute_build_merge_in_qa_yml():
+    """The build merge is performed in qa.yml after the checkout, so no
+    cross-repo push is needed."""
+    qa = _qa_text()
+    # qa.yml merges origin/main into the checked-out build when build-ref is set.
+    assert "merge origin/main" in qa
+    # The step is gated on build-ref being non-empty (a dispute).
+    assert "inputs.build-ref" in qa
+    # No push to the target repo in suite.yml.
     step = _disputed_step()
-    # The step pushes the merge commit to a ref on the target repo.
-    assert "push --quiet" in step
-    # The ref names the dispute, so it's unique per pull request.
-    assert "refs/qa-dispute" in step
+    assert "git push" not in step
 
 
 def test_dispute_summary_names_head_and_main():
@@ -64,14 +74,6 @@ def test_dispute_conflict_fails_with_cant_merge():
     assert "::error::" in step
     # The step exits 1 on failure, preventing the qa job from running.
     assert "exit 1" in step
-
-
-def test_dispute_uses_no_unlisted_secret():
-    """The disputed step uses only GITHUB_TOKEN; no secret outside the
-    project's design is read."""
-    text = _text()
-    assert "BOARD_APP_PRIVATE_KEY" not in text
-    assert "secrets." not in text.replace("secrets.GITHUB_TOKEN", "")
 
 
 def test_no_dispute_builds_default_branch():

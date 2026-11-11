@@ -12,11 +12,12 @@
 # project's current main (mqucifer/crew#945): its fix can need the story's
 # change, so against the story's head alone it could never pass once main moves.
 # The crew writes the dispute in the pull request's body as
-# `<!-- crew:qa-dispute repo=<project> story=<n> pull=<n> head=<sha> -->`; this
-# workflow merges the pull request's head with the project's main as of the run,
-# in the workflow itself, and builds at the resulting commit. If the pull request
-# can't merge cleanly with main, the run fails before any test executes. Only a
-# pull request from this repository's own branches is read that way, never a fork's.
+# `<!-- crew:qa-dispute repo=<project> story=<n> pull=<n> head=<sha> -->`; the
+# disputed step verifies the head merges cleanly with the project's main as of
+# the run, and qa.yml's qa job merges main into the checked-out head before
+# building. If the pull request can't merge cleanly with main, the run fails
+# before any test executes. Only a pull request from this repository's own
+# branches is read that way, never a fork's.
 
 name: suite
 
@@ -71,9 +72,9 @@ jobs:
           repo=$(printf '%s' "$found" | sed -E 's/.* repo=([^ ]+) .*/\1/')
           pull=$(printf '%s' "$found" | sed -E 's/.* pull=([0-9]+) .*/\1/')
           head_sha=$(printf '%s' "$found" | sed -E 's/.* head=([0-9a-f]{40}) .*/\1/')
-          # Merge the disputed pull request's head with the project's current main
-          # in the workflow itself, so the build is against main as of the run,
-          # not a stale GitHub merge ref.
+          # Verify the disputed pull request's head merges cleanly with the
+          # project's current main, so a conflict fails the run before any
+          # test executes. The build merge itself happens in qa.yml.
           workdir=$(mktemp -d)
           git clone --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
           git -C "$workdir" fetch --quiet origin "$head_sha"
@@ -84,14 +85,8 @@ jobs:
             echo "::error::mqucifer/${repo}#${pull} can't merge with main (conflicts with ${main_sha:0:7}), so the build can't be started"
             exit 1
           fi
-          merge_sha=$(git -C "$workdir" rev-parse HEAD)
-          # Push the merge commit to a ref on the project's repository so the
-          # qa job's checkout can fetch it across jobs.
-          git -C "$workdir" push --quiet \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" \
-            "HEAD:refs/qa-dispute/${pull}"
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
-          echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
+          echo "head=$head_sha" >> "$GITHUB_OUTPUT"
           echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}." >> "$GITHUB_STEP_SUMMARY"
 
   # The suite's own structural tests: they read suite.yml and verify its dispute
