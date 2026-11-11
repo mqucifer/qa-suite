@@ -139,6 +139,31 @@ jobs:
           path: build
           persist-credentials: false
 
+      # A dispute builds the disputed pull request merged with the project's main
+      # as it is now, as the project's own checks judge it (mqucifer/qa-suite#64).
+      # GitHub's refs/pull/<n>/merge can be days behind main, so the merge is made
+      # here. It can't be made in `suite.yml`: qa-suite's token can't push the
+      # commit to the project's repository for this job to fetch.
+      - name: Merge the project's main into the disputed pull request
+        if: inputs.build-ref != ''
+        working-directory: build
+        env:
+          BUILD_REPOSITORY: ${{ inputs.build-repository }}
+        run: |
+          set -euo pipefail
+          head=$(git rev-parse HEAD)
+          git fetch --quiet --no-tags --unshallow origin
+          main_ref=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2}')
+          git fetch --quiet --no-tags origin "+refs/heads/${main_ref}:refs/remotes/origin/${main_ref}"
+          main=$(git rev-parse "origin/${main_ref}")
+          if ! git -c user.name=qa-suite -c user.email=qa-suite@users.noreply.github.com \
+              merge --no-edit --quiet "origin/${main_ref}"; then
+            echo "::error::${BUILD_REPOSITORY} at ${head} can't merge with ${main_ref} (${main}), so the build can't be started"
+            exit 1
+          fi
+          echo "Built ${BUILD_REPOSITORY} at ${head} merged with ${main_ref} at ${main}: $(git rev-parse HEAD)." \
+            >> "$GITHUB_STEP_SUMMARY"
+
       - name: Check out qa-suite
         uses: actions/checkout@v4
         with:
