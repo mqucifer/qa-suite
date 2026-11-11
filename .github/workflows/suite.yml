@@ -87,8 +87,7 @@ jobs:
           merge_sha=$(git -C "$workdir" rev-parse HEAD)
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
           echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
-          echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}." \
-            >> "$GITHUB_STEP_SUMMARY"
+          echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}." >> "$GITHUB_STEP_SUMMARY"
 
   # The suite's own structural tests: they read suite.yml and verify its dispute
   # handling is correct (mqucifer/crew#945). They need no project build—just the
