@@ -5,8 +5,10 @@ These tests verify that the cause section on each sprint's page matches the
 package's data:
 
 - A 2.0.0 list of {class, role, count} entries shows one row per entry, each
-  carrying the class as its label (not 'Cause not recorded') and the entry's
-  count (mqucifer/crew-presentation#216 AC1).
+  carrying the class's plain sentence (the site's label for the class, e.g.
+  "Tests didn't pass" for VERIFY; "Cause not recorded" for a class the label
+  table doesn't know) and the entry's count (mqucifer/crew-presentation#216 AC1,
+  updated for the Sponsor's call of 2026-11-08).
 - An empty or absent top_failure_causes shows 'No failures recorded' and the
   build does not fail (mqucifer/crew-presentation#216 AC3).
 
@@ -79,9 +81,27 @@ def _slug(name: str) -> str:
     return name.lower().replace(" ", "-") + ".html"
 
 
+# 2.0.0 failure classes and their plain sentences, as the site's label table
+# (CAUSE_LABELS in build.py) maps them. A class not in this table reads
+# "Cause not recorded" on the page.
+_CLASS_LABELS = {
+    "REVIEW": "Failed at review",
+    "QA": "Failed at QA",
+    "SCHEMA": "The code didn't match the schema",
+    "EDIT": "The edit didn't land",
+    "VERIFY": "Tests didn't pass",
+    "REGRESSION": "A regression was found",
+    "OVERWRITE": "The edit overwrote existing work",
+    "BOUNDS": "Out of bounds",
+    "CAPABILITY": "Beyond the model's capability",
+}
+
+
 def test_failure_causes_2_0_class_shown_not_placeholder():
-    """AC1: a 2.0.0 entry carrying a class shows the class as its label, not
-    'Cause not recorded', and its count is preserved."""
+    """AC1: a 2.0.0 entry carrying a known class shows its plain sentence
+    (from the site's label table), not the raw class code and not
+    'Cause not recorded'; its count is preserved. An unknown class reads
+    'Cause not recorded'."""
     index = _load_index()
     checked = 0
     for name, answer in _sprints_with_metrics(index):
@@ -95,10 +115,11 @@ def test_failure_causes_2_0_class_shown_not_placeholder():
                 continue
             class_value = str(entry["class"])
             count = entry.get("count", 0)
-            # Class and count together: two entries can share a count.
-            assert (class_value, str(count)) in rows, (
+            expected_label = _CLASS_LABELS.get(class_value, "Cause not recorded")
+            # Plain sentence and count together: two entries can share a count.
+            assert (expected_label, str(count)) in rows, (
                 f"{_slug(name)}: 2.0.0 entry class={class_value!r} count {count} "
-                f"has no cause-row with that label and count; the rows are {rows!r}"
+                f"should show {expected_label!r}; the rows are {rows!r}"
             )
             checked += 1
     # Vacuous on a 1.x pin (no class-carrying entries); meaningful on 2.0.0.
