@@ -61,6 +61,7 @@ jobs:
         if: github.event.pull_request.head.repo.full_name == github.repository
         env:
           BODY: ${{ github.event.pull_request.body }}
+          TARGET_TOKEN: ${{ secrets.QA_TARGET_TOKEN }}
         run: |
           set -euo pipefail
           found=$(printf '%s' "$BODY" \
@@ -76,7 +77,7 @@ jobs:
           # with the project's current main, merged here so it is current
           # (mqucifer/crew#945). A conflict fails the run before any test.
           workdir=$(mktemp -d)
-          git clone --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
+          git clone --quiet "https://x-access-token:${TARGET_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
           git -C "$workdir" fetch --quiet origin "$head_sha"
           git -C "$workdir" checkout --quiet "$head_sha"
           git -C "$workdir" fetch --quiet origin main
@@ -87,12 +88,11 @@ jobs:
           fi
           merge_sha=$(git -C "$workdir" rev-parse HEAD)
           git -C "$workdir" push --quiet \
-            "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" \
+            "https://x-access-token:${TARGET_TOKEN}@github.com/mqucifer/${repo}.git" \
             "HEAD:refs/qa/dispute-${pull}"
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
           echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
-          echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}, at ${merge_sha:0:7}." \
-            >> "$GITHUB_STEP_SUMMARY"
+          echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}, at ${merge_sha:0:7}." >> "$GITHUB_STEP_SUMMARY"
 
   # The suite's own structural tests: they read suite.yml and verify its dispute
   # handling is correct (mqucifer/crew#945). They need no project build—just the
