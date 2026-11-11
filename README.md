@@ -39,6 +39,10 @@ pull request's tests. A red test comes back to QA before it can fail anyone
 else's pull request. The repository's own checks (`checks.yml`, from its
 record's design) lint and format the tests; only CI runs them, against a build.
 
+The suite's own structural tests, `test_suite_yml.py`, verify `suite.yml`'s
+dispute handling (mqucifer/crew#945). They need no project build—just the
+workflow file—so they run on every pull request, via the `meta` job.
+
 ## Where QA's tests come from
 QA's Tasks, filed here by the crew, each changing only its project's folder
 (mqucifer/crew#896):
