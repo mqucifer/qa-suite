@@ -145,7 +145,7 @@ jobs:
           set -euo pipefail
           cd build
           git fetch --quiet origin main
-          git merge --quiet origin/main --no-edit
+          git merge origin/main --no-edit --quiet
 
       - name: Check out qa-suite
         uses: actions/checkout@v4
