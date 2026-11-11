@@ -17,7 +17,7 @@ def test_dispute_resolves_merge_ref_not_head():
     as the build ref."""
     text = _text()
     # The workflow resolves the merge ref via the GitHub API.
-    assert "refs/pulls/${" in text and "merge" in text
+    assert "refs/pull/${" in text and "merge" in text
     # It does not pass the marker's raw head SHA as the build ref.
     # The output is the resolved merge SHA, not the marker's `head=` field.
     disputed_step = text.split("id: disputed")[1]
