@@ -23,9 +23,8 @@ def test_dispute_merges_head_with_main_not_merge_ref():
     assert "commits/refs/pull/${pull}/merge" not in text
     # The step must check out the PR head and merge origin/main.
     step = _disputed_step()
-    assert "git checkout" in step
-    assert "git merge" in step
-    assert "origin/main" in step
+    assert "checkout" in step
+    assert "merge origin/main" in step
     # The merge result is output as `head` for the qa job's build-ref.
     assert 'echo "head=$merge_sha"' in step
 
