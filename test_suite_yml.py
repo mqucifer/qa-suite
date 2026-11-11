@@ -35,7 +35,7 @@ def test_dispute_merge_commit_reachable_by_qa_job():
     across jobs)."""
     step = _disputed_step()
     # The step pushes the merge commit to a ref on the target repo.
-    assert "git push" in step
+    assert "push --quiet" in step
     # The ref names the dispute, so it's unique per pull request.
     assert "refs/qa-dispute" in step
 
