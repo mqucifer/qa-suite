@@ -12,11 +12,12 @@
 # project's current main (mqucifer/crew#945): its fix can need the story's
 # change, so against the story's head alone it could never pass once main moves.
 # The crew writes the dispute in the pull request's body as
-# `<!-- crew:qa-dispute repo=<project> story=<n> pull=<n> head=<sha> -->`; this
-# workflow resolves the pull request's refs/pull/<n>/merge ref—the same tree the
-# project's own checks judge—and builds at that. If the pull request can't merge
-# cleanly with main, the run fails before any test executes. Only a pull request
-# from this repository's own branches is read that way, never a fork's.
+# `<!-- crew:qa-dispute repo=<project> story=<n> pull=<n> head=<sha> -->`; the
+# disputed step checks out the pull request's head and merges the project's
+# current main into it, publishing the result for the qa job to build. If the
+# pull request can't merge cleanly with main, the run fails before any test
+# executes. Only a pull request from this repository's own branches is read
+# that way, never a fork's.
 
 name: suite
 
@@ -60,8 +61,8 @@ jobs:
         if: github.event.pull_request.head.repo.full_name == github.repository
         env:
           BODY: ${{ github.event.pull_request.body }}
-          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           found=$(printf '%s' "$BODY" \
             | grep -oE '<!-- crew:qa-dispute repo=[A-Za-z0-9._-]+ story=[0-9]+ pull=[0-9]+ head=[0-9a-f]{40} -->' \
             | tail -n 1 || true)
@@ -70,19 +71,27 @@ jobs:
           fi
           repo=$(printf '%s' "$found" | sed -E 's/.* repo=([^ ]+) .*/\1/')
           pull=$(printf '%s' "$found" | sed -E 's/.* pull=([0-9]+) .*/\1/')
-          # The disputed pull request merged with the project's current main: the
-          # same tree the project's own checks judge. GitHub keeps this ref while
-          # the pull request is open and mergeable; if it has unresolved conflicts
-          # with main, the ref does not exist.
-          if ! merge_sha=$(gh api "repos/mqucifer/${repo}/commits/refs/pull/${pull}/merge" \
-            --jq '.sha' 2>/dev/null); then
-            echo "::error::mqucifer/${repo}#${pull} can't merge with main (its refs/pull/${pull}/merge ref does not exist), so the build can't be started"
+          head_sha=$(printf '%s' "$found" | sed -E 's/.* head=([0-9a-f]{40}) .*/\1/')
+          # Build the dispute's commit: the disputed pull request's head merged
+          # with the project's current main, merged here so it is current
+          # (mqucifer/crew#945). A conflict fails the run before any test.
+          workdir=$(mktemp -d)
+          git clone --quiet "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" "$workdir"
+          git -C "$workdir" fetch --quiet origin "$head_sha"
+          git -C "$workdir" checkout --quiet "$head_sha"
+          git -C "$workdir" fetch --quiet origin main
+          main_sha=$(git -C "$workdir" rev-parse origin/main)
+          if ! git -C "$workdir" merge origin/main --no-edit --quiet; then
+            echo "::error::mqucifer/${repo}#${pull} can't merge with main (conflicts with ${main_sha:0:7}), so the build can't be started"
             exit 1
           fi
+          merge_sha=$(git -C "$workdir" rev-parse HEAD)
+          git -C "$workdir" push --quiet \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/mqucifer/${repo}.git" \
+            "HEAD:refs/qa/dispute-${pull}"
           echo "repo=$repo" >> "$GITHUB_OUTPUT"
           echo "head=$merge_sha" >> "$GITHUB_OUTPUT"
-          echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} merged with main, at ${merge_sha:0:7}." \
-            >> "$GITHUB_STEP_SUMMARY"
+          echo "A dispute: $repo/ runs against mqucifer/$repo#${pull} head ${head_sha:0:7} merged with main ${main_sha:0:7}, at ${merge_sha:0:7}." >> "$GITHUB_STEP_SUMMARY"
 
   # The suite's own structural tests: they read suite.yml and verify its dispute
   # handling is correct (mqucifer/crew#945). They need no project build—just the
